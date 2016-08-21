@@ -1,28 +1,5 @@
-#!/usr/bin/env python2.7
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-# Python script to manage openmw mods, hopefully (never) will be updated with
-# an actual gui.
-# Right now it should list, install and remove mods in their seperate folders
-# Goals: - List, Install, Remove mods.
-#        - Install from archives, auto unpack, auto backup
-#        - GUI
-
-
-# Currently its nothing more than a dictionary, but will probably need to
-# be expanded later on
-from collections import MutableSequence
+#!/usr/bin/env python2
+# ConfigEntry and ConfigFile are classes that describe the openmw.cfg file.
 
 
 class ConfigEntry():
@@ -77,7 +54,7 @@ class ConfigEntry():
             raise ValueError("Invalid config entry '%s'" % line)
 
         self.__type = "SETTING"
-        k,v = line.split("=")
+        k, v = line.split("=")
         self.key, self.value = k.strip(), v.strip()
 
     def type(self):
@@ -102,9 +79,6 @@ class ConfigFile(object):
         if file:
             self.file = file
             self.parse()
-
-    def insert(self, index, object):
-        return self.entries.insert(index, object)
 
     def __len__(self):
         return self.entries.__len__()
