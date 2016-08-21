@@ -121,6 +121,19 @@ class ConfigFile(object):
         """Read the config file and return a list of lines (str)."""
         return open(self.file, "r").readlines()
 
+    def __is_config_entry(self, entry):
+        """Check if entry is a config entry, raise exception if its not.
+
+        :entry: Object to be checked
+        :returns: (bool)
+        :raises: (ValueError)
+
+        """
+        if not isinstance(entry, ConfigEntry):
+            raise ValueError("ConfigFile expects ConfigEntry, got '%s' instead"
+                             % entry)
+        return True
+
     def find_key(self, key):
         """Return a ConfigFile object containing entries with matching key.
 
@@ -151,8 +164,9 @@ class ConfigFile(object):
         return output or None
 
     def insert(self, index, entry):
-        if not isinstance(entry, ConfigEntry):
-            raise ValueError("ConfigFile expects ConfigEntry objects, got %s" %s)
+        self.__is_config_entry(entry)
+        if entry in self:
+            raise ValueError("Entry '%s' is already in openmw.cfg" % entry)
 
         return self.entries.insert(index, entry)
 
