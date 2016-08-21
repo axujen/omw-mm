@@ -163,6 +163,15 @@ class ConfigFile(object):
 
         return output or None
 
+    def remove(self, entry):
+        """Remove entry from ConfigFile.
+
+        :entry: (ConfigEntry) entry to be removed.
+        :returns: (int) Index of the removed entry.
+        """
+        self.__is_config_entry(entry)
+        self.entries.remove(entry)
+
     def insert(self, index, entry):
         self.__is_config_entry(entry)
         if entry in self:
