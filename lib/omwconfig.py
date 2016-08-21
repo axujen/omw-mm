@@ -119,7 +119,7 @@ class ConfigFile(object):
 
     def __get_lines(self):
         """Read the config file and return a list of lines (str)."""
-        return open(self.file, "r").read().split("\n")[:-1]
+        return open(self.file, "r").readlines()
 
     def find_key(self, key):
         """Return a ConfigFile object containing entries with matching key.
