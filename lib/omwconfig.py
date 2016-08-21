@@ -3,7 +3,7 @@
 
 
 class ConfigEntry():
-    """OpenMW config entry
+    """OpenMW config entry.
 
     If value is ommitted then key is parsed to determine the type.
     Args:
@@ -12,27 +12,32 @@ class ConfigEntry():
     """
 
     def __init__(self, key, value=None):
-        if value:
-            self.__type = "SETTING"
-            self.key, self.value = key.strip(), value.strip()
+        if not value:
+            key, value, type = self.__parse_line(key)
         else:
-            self.__parse(key)
+            type = "SETTING"
+
+        self.__key = key
+        self.__value = value
+        self.__type = type
 
     def __str__(self):
-        if self.type() == "COMMENT":
-            return "#" + self.value
+        if self.get_type() == "COMMENT":
+            return "#" + self.get_value()
         else:
-            return "=".join([self.key, self.value])
+            return "=".join([self.get_key(), self.get_value(raw=True)])
 
     __repr__ = __str__
 
     def __eq__(self, other):
         return str(self) == str(other)
 
-    def __parse(self, line):
+    def __parse_line(self, line):
         """Parse openmw.cfg line entry
 
-        line (str): Line from openmw.cfg as is.
+        :line: (str): Raw line from openmw.cfg
+        :returns: (list) [key, value, type].
+        :raises: (ValueError)
         """
 
         # TODO: Add support for categories either here or in ConfigFile()
@@ -42,26 +47,44 @@ class ConfigEntry():
             raise ValueError("Config entry cannot be blank line.")
 
         if line[0] == "#":
-            self.__type = "COMMENT"
-            self.key = self.__type
-            self.value = line[1:]
+            type = key = "COMMENT"
+            value = line[1:]
 
-            return
+            return [key, value, type]
 
         # Other than comments only accept key=value entries.
         # May expand this class later to support settings.cfg [Sections]
         if len(line) < 3 or "=" not in line:
             raise ValueError("Invalid config entry '%s'" % line)
 
-        self.__type = "SETTING"
-        k, v = line.split("=")
-        self.key, self.value = k.strip(), v.strip()
+        type = "SETTING"
+        key, value = line.split("=")
+        return [key.strip(), value.strip(), type]
 
-    def type(self):
-        """Return the type of the entry
+    def get_key(self, raw=False):
+        """Return the entry key.
 
-        :returns: string
+        :raw: (bool) if True return self.__key directly without processing
+        :returns: (str)
 
+        """
+        return self.__key
+
+    def get_value(self, raw=False):
+        """Return the entry value.
+
+        :raw: (bool) if True return self.__value directly without processing
+        :returns: (str)
+        """
+        if self.__key == "data" and not raw:
+            return self.__value.strip('"')
+
+        return self.__value
+
+    def get_type(self):
+        """Return the entry type.
+
+        :returns: (string)
         """
         return self.__type
 
