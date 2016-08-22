@@ -72,3 +72,18 @@ def insert_data_entry(entry, cfg):
     cfg.insert(index, entry)
 
     return index
+
+
+# TODO: Make this function safer.
+def rm_mod_dir(mod_dir):
+    """Delete a mod directory
+
+    :mod_dir: (str) Path to the mod directory to be deleted.
+    :raises: (ValueError)
+    """
+    if not os.path.exists(mod_dir):
+        raise ValueError("'%s' does not exist." % mod_dir)
+    if not os.path.isdir(mod_dir):
+        raise ValueError("'%s' is not a directory." % mod_dir)
+
+    shutil.rmtree(mod_dir)
