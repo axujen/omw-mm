@@ -92,7 +92,7 @@ def rm_mod_dir(mod_dir):
 def get_installed_mod(mod):
     """Get the path of an installed mod from either a relative path or just the directory name.
 
-    :mod: (str) Direcotory where the installed mod resides, either a path or just the name.
+    :mod: (str) Directory where the installed mod resides, either a path or just the name.
     :returns: (str) Absolute path to the installed mod.
     :raises: (ValueError) if the mod does not exist in the configured mod directory.
 
