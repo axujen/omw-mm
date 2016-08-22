@@ -87,3 +87,24 @@ def rm_mod_dir(mod_dir):
         raise ValueError("'%s' is not a directory." % mod_dir)
 
     shutil.rmtree(mod_dir)
+
+
+def get_installed_mod(mod):
+    """Get the path of an installed mod from either a relative path or just the directory name.
+
+    :mod: (str) Direcotory where the installed mod resides, either a path or just the name.
+    :returns: (str) Absolute path to the installed mod.
+    :raises: (ValueError) if the mod does not exist in the configured mod directory.
+
+    """
+    # Relative path
+    if os.path.sep in mod:
+        mod_dir = get_full_path(mod)
+    # Directory name
+    else:
+        mod_dir = get_full_path(os.path.join(config["General"]["mod_dir"], mod))
+
+    if os.path.exists(mod_dir) and os.path.dirname(mod_dir) == get_full_path(config["General"]["mod_dir"]):
+        return mod_dir
+    else:
+        raise ValueError('Could not find directory "%s" inside the mods directory' % mod)
