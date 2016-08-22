@@ -6,9 +6,10 @@ class ConfigEntry():
     """OpenMW config entry.
 
     If value is ommitted then key is parsed to determine the type.
-    Args:
-        key (str): Line from openmw.cfg as is.
-        value (str): Value of key, Default: None.
+
+    :key:   (str) Line from openmw.cfg as is.
+    :value: (str) Value of key, Default: None.
+    :raises: (ValueError)
     """
 
     def __init__(self, key, value=None):
