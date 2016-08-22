@@ -2,7 +2,7 @@
 # ConfigEntry and ConfigFile are classes that describe the openmw.cfg file.
 
 
-class ConfigEntry():
+class ConfigEntry(object):
     """OpenMW config entry.
 
     If value is ommitted then key is parsed to determine the type.
