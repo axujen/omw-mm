@@ -35,7 +35,7 @@ def copy_to_mod_dir(dir, dest):
     return new_dir
 
 
-def get_latest_index(key, cfg):
+def get_latest_key_index(key, cfg):
     """Get the index of the last :key: entry in openmw.cfg.
 
     :key: (str) Name of the key that needs to be indexed
@@ -68,7 +68,7 @@ def insert_data_entry(entry, cfg):
     :cfg: (ConfigFile) openmw.cfg config object.
     :returns: (int) Index of the new appended entry.
     """
-    index = get_latest_index("data", cfg) + 1
+    index = get_latest_key_index("data", cfg) + 1
     cfg.insert(index, entry)
 
     return index
