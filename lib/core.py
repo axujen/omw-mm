@@ -15,7 +15,7 @@ def is_mod_dir(dir):
     for file in os.listdir(dir):
         if os.path.isdir(file):
             continue
-        for ext in config["General"]["mod_extensions"]:
+        for ext in config.get("General", "plugin_extensions").split():
             if file.endswith(ext):
                 return True
 
@@ -97,14 +97,15 @@ def get_installed_mod(mod):
     :raises: (ValueError) if the mod does not exist in the configured mod directory.
 
     """
+    mods_dir = get_full_path(config.get("General", "mods_dir"))
     # Relative path
     if os.path.sep in mod:
         mod_dir = get_full_path(mod)
     # Directory name
     else:
-        mod_dir = get_full_path(os.path.join(config["General"]["mod_dir"], mod))
+        mod_dir = get_full_path(os.path.join(mods_dir, mod))
 
-    if os.path.exists(mod_dir) and os.path.dirname(mod_dir) == get_full_path(config["General"]["mod_dir"]):
+    if os.path.exists(mod_dir) and os.path.dirname(mod_dir) == mods_dir:
         return mod_dir
     else:
         raise ValueError('Could not find directory "%s" inside the mods directory' % mod)
