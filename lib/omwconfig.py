@@ -167,7 +167,7 @@ class ConfigFile(object):
 
         output = ConfigFile()
         for entry in self:
-            if entry.key == key:
+            if entry.get_key() == key:
                 output.append(entry)
 
         return output or None
@@ -181,7 +181,7 @@ class ConfigFile(object):
         """
         output = ConfigFile()
         for entry in self:
-            if entry.value == value:
+            if entry.get_value(raw=True) == value:
                 output.append(entry)
 
         return output or None
