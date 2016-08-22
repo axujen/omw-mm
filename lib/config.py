@@ -85,5 +85,4 @@ if not os.path.exists(path):
     config = init(path)
 else:
     # Config file already exists.
-    config = SafeConfigParser()
-    config.read(path)
+    config = read_config(path)
