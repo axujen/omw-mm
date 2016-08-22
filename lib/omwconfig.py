@@ -17,6 +17,18 @@ class ConfigEntry():
         else:
             type = "SETTING"
 
+        # Entry keys cannot (or should not?) contain comments
+        if "#" in key:
+            raise ValueError("Entry key cannot contain a comment. got '%s'" % key)
+
+        # Strip comments from values and raise an error if value
+        # turns out to be empty
+        # TODO: Preserve comments in their own variable.
+        old_value = value
+        value = value.split("#")[0].strip()
+        if not value:
+            raise ValueError("Entry value cannot be empty. got '%s'" % old_value)
+
         self.__key = key
         self.__value = value
         self.__type = type
