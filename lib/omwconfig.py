@@ -230,7 +230,7 @@ class ConfigFile(object):
         for line in self.__get_lines():
             # Empty lines are ignored.
             # This is the same behaviour as openmw-launcher
-            if not line:
+            if line.isspace():
                 continue
 
             self.append(ConfigEntry(line))
