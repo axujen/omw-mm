@@ -45,7 +45,7 @@ def get_latest_key_index(key, cfg):
     i = 0
     index = None
     for entry in cfg:
-        if entry.key == key:
+        if entry.get_key() == key:
             index = i
         i += 1
 
