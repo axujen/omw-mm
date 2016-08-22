@@ -98,13 +98,13 @@ class ConfigFile(object):
     # TODO: Update this class to take file handles instead of filenames
 
     def __init__(self, file=None):
-        self.entries = []
+        self.__entries = []
         if file:
             self.file = file
             self.parse()
 
     def __len__(self):
-        return self.entries.__len__()
+        return self.__entries.__len__()
 
     def __str__(self):
         """Convert entries into a string ready to save on disk."""
@@ -126,19 +126,19 @@ class ConfigFile(object):
                 start = 0
 
             for i in range(start, stop):
-                output.append(self.entries[i])
+                output.append(self.__entries[i])
             return output
 
-        return self.entries.__getitem__(index)
+        return self.__entries.__getitem__(index)
 
     def __setitem__(self, index, object):
-        return self.entries.__setitem__(index, object)
+        return self.__entries.__setitem__(index, object)
 
     def __delitem__(self, index, object=None):
-        return self.entries.__delitem__(index, object)
+        return self.__entries.__delitem__(index, object)
 
     def __contains__(self, entry):
-        return entry in self.entries
+        return self.__entries.__contains__(entry)
 
     def __get_lines(self):
         """Read the config file and return a list of lines (str)."""
@@ -193,14 +193,18 @@ class ConfigFile(object):
         :returns: (int) Index of the removed entry.
         """
         self.__is_config_entry(entry)
-        self.entries.remove(entry)
+
+        if entry not in self:
+            raise ValueError("Entry: '%s' not in config file" % entry)
+
+        self.__entries.remove(entry)
 
     def insert(self, index, entry):
         self.__is_config_entry(entry)
         if entry in self:
             raise ValueError("Entry '%s' is already in openmw.cfg" % entry)
 
-        return self.entries.insert(index, entry)
+        return self.__entries.insert(index, entry)
 
     def append(self, entry):
         return self.insert(len(self), entry)
