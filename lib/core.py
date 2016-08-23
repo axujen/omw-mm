@@ -11,12 +11,22 @@ def is_mod_dir(dir):
     :dir: (str) Path to the mod directory.
     :returns: (bool)
     """
+
+    # Checking for file/directory names is kind of bad but i cant figure out
+    # another method.
+    plugin_extensions = [".esp", ".esm", "omwaddon"]
+    resource_directories = ["Textures", "Meshes", "Icons", "Fonts", "Sound",
+                            "BookArt", "Splash", "Video"]
     for file in os.listdir(dir):
-        if os.path.isdir(file):
-            continue
-        for ext in config.get("General", "plugin_extensions").split():
-            if file.endswith(ext):
-                return True
+        # Check for morrowind resource folders
+        if os.path.isdir(os.path.join(dir, file)):
+            for resource_dir in resource_directories:
+                if file.lower() == resource_dir.lower():
+                    return True
+        else:  # Check for morrowind plugin files ( .esm .esp etc)
+            for ext in plugin_extensions:
+                if file.endswith(ext):
+                    return True
 
     return False
 
