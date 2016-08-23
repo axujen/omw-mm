@@ -31,6 +31,12 @@ class ConfigEntry(object):
         if not value:
             raise ValueError("Entry value cannot be empty. got '%s'" % old_value)
 
+        # Automatically add quotes for data entries
+        if key == "data":
+            if not value[0] == value[-1] == '"':  # is the value quoted?
+                # then quote it for internal storage.
+                value = '"%s"' % value
+
         self.set_config(config)
         self.__key = key
         self.__value = value
