@@ -116,11 +116,10 @@ class ConfigEntry(object):
 class ConfigFile(object):
     """OpenMW config file openmw.cfg
 
-    Args:
-        file (str): Path to openmw.cfg, Default: None
+    :file: (str): Path to openmw.cfg, Default: None
     """
-    # TODO: Update this class to take file handles instead of filenames
 
+    # TODO: Update this class to take file handles instead of filenames
     def __init__(self, file=None):
         self.__entries = []
         if file:
