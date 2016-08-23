@@ -144,19 +144,12 @@ def list_plugins(omw_cfg, enabled=False, disabled=False):
 
     omw_cfg = ConfigFile(core.get_full_path(omw_cfg))
     entries = omw_cfg.find_key("data")
-    plugin_extensions = [".esm", ".esp", ".omwaddon"]
+    mods = [OmwMod(e.get_value()) for e in entries]
+
     plugins = []
-
-    for entry in entries:
-        mod_dir = entry.get_value()
-        for file in os.listdir(mod_dir):
-            # Skip directories
-            if not os.path.isfile(os.path.join(mod_dir, file)):
-                    continue
-
-            for ext in plugin_extensions:
-                if file.endswith(ext):
-                    plugins.append(file)
+    for mod in mods:
+        for plugin in mod.get_plugins():
+            plugins.append(plugin)
 
     if enabled and not disabled:
         plugins = [entry.get_value() for entry in omw_cfg.find_key("content")]
