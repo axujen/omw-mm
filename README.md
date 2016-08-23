@@ -25,3 +25,6 @@ Commands:
     uninstall           Uninstall a mod directory
 
 ```
+
+# WARNING
+Update your openmw.cfg file and even your mods directory, this mod is in early developement and may (i should say will) cause damage.
