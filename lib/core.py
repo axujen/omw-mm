@@ -98,23 +98,35 @@ def rm_mod_dir(mod_dir):
     shutil.rmtree(mod_dir)
 
 
-def get_installed_mod(mod):
-    """Get the path of an installed mod from either a relative path or just the directory name.
+# This function should be heavily reworked.
+def get_mod_entry(mod, cfg):
+    """Get the config entry an installed mod from either a relative path or just the directory name.
+    Note that if a name is given this function will only check in the preconfigured mods_dir.
 
     :mod: (str) Directory where the installed mod resides, either a path or just the name.
-    :returns: (str) Absolute path to the installed mod.
-    :raises: (ValueError) if the mod does not exist in the configured mod directory.
-
+    :cfg: (ConfigFile) openmw.cfg object.
+    :returns: (ConfigEntry or None) Config entry referencing the mod. Or None if no entry could be found
     """
-    mods_dir = get_full_path(config.get("General", "mods_dir"))
-    # Relative path
-    if os.path.sep in mod:
-        mod_dir = get_full_path(mod)
-    # Directory name
-    else:
-        mod_dir = get_full_path(os.path.join(mods_dir, mod))
 
-    if os.path.exists(mod_dir) and os.path.dirname(mod_dir) == mods_dir:
-        return mod_dir
+    output = None
+    entries = cfg.find_key("data")
+
+    # Path
+    if os.path.sep in mod:
+        mod_path = get_full_path(mod)
+        for entry in entries:
+            if mod_path == get_full_path(entry.get_value()):
+                output = entry
+    # Name
     else:
-        raise ValueError('Could not find directory "%s" inside the mods directory' % mod)
+        mods_dir = get_full_path(config.get("General", "mods_dir"))
+        for entry in entries:
+            # Only fetch mods installed in the configured mods directory, otherwise
+            # we could have duplicate names for multiple mod directories.
+            # TODO: Inform the user through the cli about this restriction
+            if not os.path.dirname(entry.get_value()) == mods_dir:
+                continue
+            elif mod == os.path.basename(entry.get_value()):
+                output = entry
+
+    return output
