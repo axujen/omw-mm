@@ -10,6 +10,7 @@
 import os
 from argparse import ArgumentParser
 from lib.omwconfig import ConfigFile, ConfigEntry
+from lib.omwmod import OmwMod
 from lib.config import config
 from lib import core
 
@@ -77,11 +78,15 @@ def uninstall_mod(omw_cfg, mod, rm=False):
     :rm: (bool) If true then delete the mod directory. Default: False
     """
 
-    omw_cfg = ConfigFile(core.get_full_path(omw_cfg))
+    # Path given
+    if os.path.sep in mod:
+        mod_obj = OmwMod(core.get_full_path((mod)))
+    else:  # Only a name was given
+        mods_dir = config.get("General", "mods_dir")
+        mod_obj = OmwMod(core.get_full_path((os.path.join(mods_dir, mod))))
 
-    # TODO: This should be redone, get_installed_mod only checks files
-    # in the preconfigured mods_dir, and does not even bother to check openmw.cfg
-    entry = core.get_mod_entry(mod, omw_cfg)
+    omw_cfg = ConfigFile(core.get_full_path(omw_cfg))
+    entry = core.get_mod_entry(mod_obj, omw_cfg)
 
     if not entry:
         print("Could not find a reference to %s in openmw.cfg" % mod)

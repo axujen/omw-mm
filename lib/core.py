@@ -1,7 +1,6 @@
 # Core functions used in both CLI and GUI
 import os
 import shutil
-from config import config
 
 
 # TODO: Expand "mod dir" definition so it supports pluginless directories
@@ -100,10 +99,9 @@ def rm_mod_dir(mod_dir):
 
 # This function should be heavily reworked.
 def get_mod_entry(mod, cfg):
-    """Get the config entry an installed mod from either a relative path or just the directory name.
-    Note that if a name is given this function will only check in the preconfigured mods_dir.
+    """Try to find a mods config entry in openmw.cfg
 
-    :mod: (str) Directory where the installed mod resides, either a path or just the name.
+    :mod: (OmwMod) Mod object.
     :cfg: (ConfigFile) openmw.cfg object.
     :returns: (ConfigEntry or None) Config entry referencing the mod. Or None if no entry could be found
     """
@@ -111,22 +109,8 @@ def get_mod_entry(mod, cfg):
     output = None
     entries = cfg.find_key("data")
 
-    # Path
-    if os.path.sep in mod:
-        mod_path = get_full_path(mod)
-        for entry in entries:
-            if mod_path == get_full_path(entry.get_value()):
-                output = entry
-    # Name
-    else:
-        mods_dir = get_full_path(config.get("General", "mods_dir"))
-        for entry in entries:
-            # Only fetch mods installed in the configured mods directory, otherwise
-            # we could have duplicate names for multiple mod directories.
-            # TODO: Inform the user through the cli about this restriction
-            if not os.path.dirname(entry.get_value()) == mods_dir:
-                continue
-            elif mod == os.path.basename(entry.get_value()):
-                output = entry
+    for entry in entries:
+        if mod.get_path() == entry.get_value():
+            output = entry
 
     return output
