@@ -12,7 +12,7 @@ def init(path):
     config = SafeConfigParser()
     # Defaults
     config.add_section("General")
-    config.set("General", "mods_dir", "./unittests/mods")
+    config.set("General", "mods_dir", "~/.local/share/openmw/mods")
     config.set("General", "openmw_cfg", "~/.config/openmw/openmw.cfg")
 
     write_config(config, path)
