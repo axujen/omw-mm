@@ -8,14 +8,12 @@ class ConfigEntry(object):
 
     :key:   (str) Line from openmw.cfg as is.
     :value: (str) Value of key, Default: None.
+    :config: (ConfigFile) Config object where this entry resides. Default: None
     :raises: (ValueError)
     """
 
     # TODO: Redo init, it looks like a mess.
-    def __init__(self, config, key, value=None):
-        if not isinstance(config, ConfigFile):
-            raise ValueError("config must be a ConfigFile object. got %s" % config)
-
+    def __init__(self, key, value=None, config=None):
         if not value:
             key, value, type = self.__parse_line(key)
         else:
@@ -33,7 +31,7 @@ class ConfigEntry(object):
         if not value:
             raise ValueError("Entry value cannot be empty. got '%s'" % old_value)
 
-        self.__config = config
+        self.set_config(config)
         self.__key = key
         self.__value = value
         self.__type = type
@@ -97,6 +95,15 @@ class ConfigEntry(object):
             return self.__value.strip('"')
 
         return self.__value
+
+    def set_config(self, config):
+        """Set the entry config object
+
+        :config: (ConfigFile) openmw.cfg object.
+        """
+        if not isinstance(config, ConfigFile):
+            raise ValueError("config must be a ConfigFile object. got %s" % config)
+        self.__config = config
 
     def get_config(self):
         """Get the entry config object.
@@ -211,6 +218,7 @@ class ConfigFile(object):
         if entry not in self:
             raise ValueError("Entry: '%s' not in config file" % entry)
 
+        entry.set_config(None)
         self.__entries.remove(entry)
 
     def insert(self, index, entry):
@@ -219,6 +227,7 @@ class ConfigFile(object):
         if entry in self:
             raise ValueError("Entry '%s' is already in openmw.cfg" % entry)
 
+        entry.set_config(self)
         return self.__entries.insert(index, entry)
 
     def append(self, entry):
@@ -235,7 +244,7 @@ class ConfigFile(object):
             if line.isspace():
                 continue
 
-            self.append(ConfigEntry(self, line))
+            self.append(ConfigEntry(line, config=self))
 
     def write(self, path=None):
         """Save the config file to a location on disk.
