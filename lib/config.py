@@ -1,6 +1,7 @@
 # This file contains default configuration options for openmw-mm
 from ConfigParser import SafeConfigParser
 import os.path
+import core
 
 
 def init(path):
@@ -20,18 +21,6 @@ def init(path):
     return config
 
 
-# This function is taken straight from the core module
-# This is so we dont have to import core.py since it relies on this module to run
-# TODO: Fix above problem in a more elegant way.
-def get_full_path(path):
-    """Return the full expanded path of :path:.
-
-    :path: (str) Path to expand.
-    :returns: (str) Expanded path.
-    """
-    return os.path.abspath(os.path.expanduser(path))
-
-
 def get_config_path():
     """Return the first path to an existing configuration file.
     If no file exists return the first one in the list of possible paths.
@@ -40,14 +29,14 @@ def get_config_path():
     """
     paths = ["./openmw-mm.cfg", "~/.config/openmw/openmw-mm.cfg"]
     for path in paths:
-        path = get_full_path(path)
+        path = core.get_full_path(path)
         if os.path.exists(path):
             # Maybe raise an error or print a warrning here?
             if not os.path.isdir(path):
                 return path
 
     # If no existing file can be found, return the first possible path.
-    return get_full_path(paths[0])
+    return core.get_full_path(paths[0])
 
 
 def read_config(path):
