@@ -140,7 +140,6 @@ def list_plugins(omw_cfg, enabled=False, disabled=False):
     :omw_cfg: (str) Path to openmw.cfg.
     :enabled: (bool) Only list enabled plugins. Default: False
     :disabled: (bool) Only list disabled plugins. Default: False
-    :returns: TODO
     """
 
     omw_cfg = ConfigFile(core.get_full_path(omw_cfg))
