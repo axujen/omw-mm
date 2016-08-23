@@ -152,6 +152,9 @@ class ConfigFile(object):
     def __contains__(self, entry):
         return self.__entries.__contains__(entry)
 
+    def __iter__(self):
+        return self.__entries.__iter__()
+
     def __get_lines(self):
         """Read the config file and return a list of lines (str)."""
         return open(self.file, "r").readlines()
