@@ -1,4 +1,3 @@
-#!/usr/bin/env python2
 # ConfigEntry and ConfigFile are classes that describe the openmw.cfg file.
 
 

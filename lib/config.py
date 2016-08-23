@@ -1,4 +1,3 @@
-#!/usr/bin/env python2
 # This file contains default configuration options for openmw-mm
 from ConfigParser import SafeConfigParser
 import os.path

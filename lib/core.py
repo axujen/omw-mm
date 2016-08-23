@@ -1,4 +1,3 @@
-#!/usr/bin/env python2
 # Core functions used in both CLI and GUI
 import os
 import shutil
