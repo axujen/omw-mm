@@ -122,7 +122,7 @@ def install_mod(omw_cfg, src, dest, force=False):
         new_dir = core.copy_to_mod_dir(src_dir, dest_dir)
 
         # Add an entry
-        entry = ConfigEntry("data", '"%s"' % new_dir)  # data entries have to be quoted
+        entry = ConfigEntry(omw_cfg, "data", '"%s"' % new_dir)  # data entries have to be quoted
         print("Adding entry %s to openmw.cfg" % entry)
         core.insert_data_entry(entry, omw_cfg)
         omw_cfg.write()

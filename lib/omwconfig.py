@@ -11,7 +11,11 @@ class ConfigEntry(object):
     :raises: (ValueError)
     """
 
-    def __init__(self, key, value=None):
+    # TODO: Redo init, it looks like a mess.
+    def __init__(self, config, key, value=None):
+        if not isinstance(config, ConfigFile):
+            raise ValueError("config must be a ConfigFile object. got %s" % config)
+
         if not value:
             key, value, type = self.__parse_line(key)
         else:
@@ -29,6 +33,7 @@ class ConfigEntry(object):
         if not value:
             raise ValueError("Entry value cannot be empty. got '%s'" % old_value)
 
+        self.__config = config
         self.__key = key
         self.__value = value
         self.__type = type
@@ -92,6 +97,13 @@ class ConfigEntry(object):
             return self.__value.strip('"')
 
         return self.__value
+
+    def get_config(self):
+        """Get the entry config object.
+
+        :returns: (ConfigFile) openmw.cfg object
+        """
+        return self.__config
 
     def get_type(self):
         """Return the entry type.
@@ -235,7 +247,7 @@ class ConfigFile(object):
             if line.isspace():
                 continue
 
-            self.append(ConfigEntry(line))
+            self.append(ConfigEntry(self, line))
 
     def write(self, path=None):
         """Save the config file to a location on disk.
