@@ -21,7 +21,6 @@ def list_mods(omw_cfg, mods_dir=None, path=False):
     :omw_cfg: (ConfigFile) openmw.cfg object.
     :mods_dir: (str) Optional, only mods in this directory are listed. Default: None
     :path:    (bool) if True print full path instead of basename. Default: False
-    :returns: (ConfigFile) List of ConfigEntry objects refering to the listed mods.
     """
 
     omw_cfg = ConfigFile(core.get_full_path(omw_cfg))
@@ -36,15 +35,14 @@ def list_mods(omw_cfg, mods_dir=None, path=False):
     else:
         entries = omw_cfg.find_key("data")
 
-    if not path:
-        mods = [os.path.basename(mod.get_value()) for mod in entries]
+    mods = [OmwMod(entry.get_value()) for entry in entries]
+
+    if path:
+        for mod in mods:
+            print(mod.get_path())
     else:
-        mods = [mod.get_value() for mod in entries]
-
-    for mod in mods:
-        print(mod)
-
-    return entries
+        for mod in mods:
+            print(mod.get_name())
 
 
 def clean_mods(omw_cfg):
