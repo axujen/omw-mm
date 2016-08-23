@@ -13,7 +13,6 @@ def init(path):
     # Defaults
     config.add_section("General")
     config.set("General", "mods_dir", "./unittests/mods")
-    config.set("General", "plugin_extensions", ".esm .esp .omwaddon")
     config.set("General", "openmw_cfg", "~/.config/openmw/openmw.cfg")
 
     write_config(config, path)
