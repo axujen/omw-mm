@@ -107,7 +107,7 @@ class ConfigEntry(object):
 
         :config: (ConfigFile) openmw.cfg object.
         """
-        if not isinstance(config, ConfigFile):
+        if config is not None and not isinstance(config, ConfigFile):
             raise ValueError("config must be a ConfigFile object. got %s" % config)
         self.__config = config
 
