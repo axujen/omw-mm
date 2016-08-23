@@ -131,6 +131,47 @@ def install_mod(omw_cfg, src, dest, force=False):
         raise SystemExit(1)
 
 
+def list_plugins(omw_cfg, enabled=False, disabled=False):
+    """List detected openmw plugins.
+
+    :omw_cfg: (str) Path to openmw.cfg.
+    :enabled: (bool) Only list enabled plugins. Default: False
+    :disabled: (bool) Only list disabled plugins. Default: False
+    :returns: TODO
+    """
+
+    omw_cfg = ConfigFile(core.get_full_path(omw_cfg))
+    entries = omw_cfg.find_key("data")
+    plugin_extensions = [".esm", ".esp", ".omwaddon"]
+    plugins = []
+
+    for entry in entries:
+        mod_dir = entry.get_value()
+        for file in os.listdir(mod_dir):
+            # Skip directories
+            if not os.path.isfile(os.path.join(mod_dir, file)):
+                    continue
+
+            for ext in plugin_extensions:
+                if file.endswith(ext):
+                    plugins.append(file)
+
+    if enabled and not disabled:
+        plugins = [entry.get_value() for entry in omw_cfg.find_key("content")]
+
+    if disabled and not enabled:
+        enabled_plugins = [entry.get_value() for entry in omw_cfg.find_key("content")]
+        plugins = [plugin for plugin in plugins if plugin not in enabled_plugins]
+
+    if plugins:
+        for plugin in plugins:
+            print(plugin)
+    else:
+        print("No plugin files were found")
+
+    return plugins
+
+
 def create_arg_parser(*args, **kwargs):
     """Create the argument parser.
 
@@ -153,6 +194,13 @@ def create_arg_parser(*args, **kwargs):
             help="List only mods that exist in directory")
     parser_l.add_argument("-s", "--showpath", action="store_true", dest="path", default=False,
             help="Show paths instead of just names")
+
+    # List plugins
+    parser_lp = subparser.add_parser("list-plugins", help="List plugins")
+    parser_lp.add_argument("-e" "--enabled", action="store_true", dest="enabled",
+            default=False, help="Only show installed plugins")
+    parser_lp.add_argument("-d", "--disabled", action="store_true", dest="disabled",
+            default=False, help="Only show disabled plugins")
 
     # Clean command
     subparser.add_parser('clean', help="Clean non existing mod dirs from openmw.cfg")
@@ -190,3 +238,6 @@ if __name__ == "__main__":
 
     if args.command == "uninstall":
         uninstall_mod(args.cfg, args.mod, args.rm)
+
+    if args.command == "list-plugins":
+        list_plugins(args.cfg, args.enabled, args.disabled)
