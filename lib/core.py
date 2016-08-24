@@ -157,3 +157,42 @@ def get_disabled_plugins(cfg, modlist):
             disabled_plugins.append(plugin)
 
     return disabled_plugins
+
+
+def enable_plugin(cfg, modlist, entry):
+    """Enable a plugin by creating a new entry for it in openmw.cfg
+
+    :cfg: (ConfigFile) openmw.cfg object.
+    :modlist: (list) List of currently installed mods
+    :entry: (ConfigEntry) config entry for the plugin.
+    :raises: (ValueError)
+    """
+    plugin = entry.get_value()
+    if plugin not in get_plugins(modlist):
+        raise ValueError("No such plugin %s" % plugin)
+
+    if plugin in get_enabled_plugins(cfg):
+        raise ValueError("Plugin %s is already enabled" % plugin)
+
+    # Append the new entry behind the latest content entry to keep things clean.
+    index = get_latest_key_index("content", cfg)
+    cfg.insert(index + 1, entry)
+
+
+def disable_plugin(cfg, modlist, entry):
+    """Disable a plugin from openmw.cfg
+
+    :cfg:  (ConfigFile) openmw.cfg object.
+    :modlist: (list) List of currently installed mods.
+    :entry:  (ConfigEntry) Plugins config entry.
+    :raises: (ValueError)
+    """
+
+    plugin = entry.get_value()
+    if plugin in get_disabled_plugins(cfg, modlist):
+        raise ValueError("Plugin %s is already disabled" % plugin)
+
+    if plugin not in get_plugins(modlist):
+        raise ValueError("No such plugin %s" % plugin)
+
+    cfg.remove(entry)
