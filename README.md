@@ -1,10 +1,19 @@
-# openmw-utils
-openmw-utils is my attempt at creating a suite of utils to manage openmw mods.
+# openmw-mm
+openmw-mm is my attempt at creating an advanced mod management suite for openmw.
 
-Right only a script to install and uninstall mods exists.
-But the project aims to provide the ability to manage plugins, merge leveled lists and sort the load order automatically
+Right now a cli script is up and running (expect bugs though).
+This script can handle the following operations:
+  - Install a mod from a directory (archive support is being considered)
+  - Uninstall an already installed mod
+  - Enable/Disable plugins
+  - List currently installed mods
+  - List currently available plugins, sorted by load order for enabled plugins.
+  - List currently available plugins in a tree view that shows the parent mod of each plugin
+  - Clean openmw.cfg from references to unavailable directories, so you can manually delete mods and have the script clean up openmw.cfg for you
 
-In the distant future i may even add windows support and a GUI (Don't ask me when though, i dont even know where to begin)
+The project also aims to provide cross-platform support for windows (and hopefully mac) as well as the ability to sort mods with mlox and create merged leveled lists.
+
+A GUI is also planned but don't ask me when, i don't even know where to begin with that.
 # USAGE
 
 openmw-mm-cli.py
@@ -27,6 +36,7 @@ Commands:
     enable              Enable a plugin
     disable             disable a plugin
 ```
+Run openmw-mm-cli.py command --help for additional help about each command.
 
 # WARNING
 Backup your openmw.cfg file and even your mods directory, this project is in early developement and may (i should say will) cause damage.
