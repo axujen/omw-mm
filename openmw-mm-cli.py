@@ -134,35 +134,42 @@ def install_mod(omw_cfg, src, dest, force=False):
         raise SystemExit(1)
 
 
-def list_plugins(omw_cfg, simple=False):
+def list_plugins(omw_cfg, tree=False):
     """List detected openmw plugins.
 
     :omw_cfg: (str) Path to openmw.cfg.
-    :tree: (bool) If true show parent mods in a tree.
+    :tree: (bool) If True show parent mods in a tree.
     """
 
     omw_cfg = ConfigFile(core.get_full_path(omw_cfg))
-    entries = omw_cfg.find_key("data")
-    mods = [OmwMod(e.get_value(), e) for e in entries]
+    mods = [OmwMod(e.get_value(), e) for e in omw_cfg.find_key("data")]
 
-    for mod in mods:
-        plugins = mod.get_plugins()
-        if not plugins:  # Skip pluginless mods
-            continue
-        else:
-            if not simple:
+    if tree:
+        for mod in mods:
+            plugins = mod.get_plugins()
+            if not plugins:  # Skip pluginless mods
+                continue
+            else:
                 print("%s:" % mod.get_name())
                 for plugin in plugins:
                     if mod.plugin_is_enabled(plugin):
-                        print("\t+ %s" % plugin)
+                        prefix = "+"
                     else:
-                        print("\t- %s" % plugin)
-            else:
-                for plugin in mod.get_plugins():
-                    if mod.plugin_is_enabled(plugin):
-                        print("+ %s" % plugin)
-                    else:
-                        print("- %s" % plugin)
+                        prefix = "-"
+
+                    print("\t%s %s" % (prefix, plugin))
+    else:
+        enabled_plugins = core.get_enabled_plugins(omw_cfg)
+        disabled_plugins = core.get_disabled_plugins(omw_cfg, mods)
+
+        if enabled_plugins:
+            i = 1
+            for plugin in enabled_plugins:
+                print("(%d) %s" % (i, plugin))
+                i += 1
+        if disabled_plugins:
+            for plugin in disabled_plugins:
+                print("- %s" % plugin)
 
 
 def create_arg_parser(*args, **kwargs):
@@ -190,8 +197,8 @@ def create_arg_parser(*args, **kwargs):
 
     # List plugins
     parser_lp = subparser.add_parser("list-plugins", help="List plugins")
-    parser_lp.add_argument("-s", "--simple", action="store_true", dest="simple",
-            default=False, help="Disable tree view, this will show plugins in their load order")
+    parser_lp.add_argument("-t", "--tree", action="store_true", dest="tree",
+            default=False, help="List plugins in a tree view, showing their parent mods.")
 
     # Clean command
     subparser.add_parser('clean', help="Clean non existing mod dirs from openmw.cfg")
@@ -231,4 +238,4 @@ if __name__ == "__main__":
         uninstall_mod(args.cfg, args.mod, args.rm)
 
     if args.command == "list-plugins":
-        list_plugins(args.cfg, args.simple)
+        list_plugins(args.cfg, args.tree)
