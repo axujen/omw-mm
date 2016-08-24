@@ -65,7 +65,18 @@ def get_full_path(path):
     :path: (str) Path to expand.
     :returns: (str) Expanded path.
     """
-    return os.path.abspath(os.path.expanduser(path))
+
+    # Expand env variables.
+    path = os.path.expandvars(path)
+    # Expand user (~)
+    path = os.path.expanduser(path)
+    # Get the absolute path
+    path = os.path.abspath(path)
+    # normalize
+    path = os.path.normpath(path)
+    path = os.path.normcase(path)
+
+    return path
 
 
 def insert_data_entry(entry, cfg):
