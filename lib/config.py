@@ -64,8 +64,6 @@ def write_config(config, path):
 
 
 # Present the config object to be imported here.
-# Im not really sure this is a good ideaa, this module may be imported from different places
-# So this code might be executed multiple times which is not good.
 path = get_config_path()
 if not os.path.exists(path):
     # No config file detected, create a new one

@@ -3,7 +3,6 @@ import os
 import shutil
 
 
-# TODO: Expand "mod dir" definition so it supports pluginless directories
 def is_mod_dir(dir):
     """Check if given directory is an openmw mod directory.
 
@@ -97,7 +96,6 @@ def rm_mod_dir(mod_dir):
     shutil.rmtree(mod_dir)
 
 
-# This function should be heavily reworked.
 def get_mod_entry(mod, cfg):
     """Try to find a mods config entry in openmw.cfg
 
