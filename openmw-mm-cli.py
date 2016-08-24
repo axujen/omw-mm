@@ -172,6 +172,53 @@ def list_plugins(omw_cfg, tree=False):
                 print("- %s" % plugin)
 
 
+def enable_plugin(omw_cfg, plugin):
+    """Enable a plugin by name.
+
+    :omw_cfg: (ConfigFile) openmw.cfg object.
+    :plugin: (str) Full plugin name.
+    """
+
+    omw_cfg = ConfigFile(core.get_full_path(omw_cfg))
+    mods = [OmwMod(e.get_value(), e) for e in omw_cfg.find_key("data")]
+
+    if plugin in core.get_enabled_plugins(omw_cfg):
+        print("Plugin %s is already enabled!" % plugin)
+        raise SystemExit(1)
+
+    if plugin not in core.get_disabled_plugins(omw_cfg, mods):
+        print("Could not find plugin %s in any of the currently installed mods" % plugin)
+        raise SystemExit(1)
+
+    entry = ConfigEntry("content", plugin, omw_cfg)
+
+    print("Enabling %s" % plugin)
+    core.enable_plugin(omw_cfg, mods, entry)
+    omw_cfg.write()
+
+
+def disable_plugin(omw_cfg, plugin):
+    """Disable a currently installed plugin by name.
+
+    :omw_cfg: (ConfigFile) openwm.cfg object.
+    :plugin: (str) Name of the plugin to be disabled.
+    """
+
+    omw_cfg = ConfigFile(core.get_full_path(omw_cfg))
+    mods = [OmwMod(e.get_value(), e) for e in omw_cfg.find_key("data")]
+
+    if plugin in core.get_disabled_plugins(omw_cfg, mods):
+        print("Plugin %s is already disabled!" % plugin)
+
+    if plugin not in core.get_plugins(mods):
+        print("Could not find plugin %s in any of the currently installed mods." % plugin)
+
+    entry = ConfigEntry("content", plugin, omw_cfg)
+    core.disable_plugin(omw_cfg, mods, entry)
+
+    omw_cfg.write()
+
+
 def create_arg_parser(*args, **kwargs):
     """Create the argument parser.
 
@@ -220,6 +267,14 @@ def create_arg_parser(*args, **kwargs):
     parser_u.add_argument("-d", "--delete", action="store_true", dest="rm",
             help="Delete the directory (USE AT YOUR OWN RISK!)")
 
+    # Enable command
+    parser_ep = subparser.add_parser("enable", help="Enable a plugin")
+    parser_ep.add_argument("plugin", help="Full name of the plugin eg: Morrowind.esm")
+
+    # Disable command
+    parser_dp = subparser.add_parser("disable", help="disable a plugin")
+    parser_dp.add_argument("plugin", help="Full name of the plugin eg: Morrowind.esm")
+
     return parser
 
 if __name__ == "__main__":
@@ -239,3 +294,9 @@ if __name__ == "__main__":
 
     if args.command == "list-plugins":
         list_plugins(args.cfg, args.tree)
+
+    if args.command == "enable":
+        enable_plugin(args.cfg, args.plugin)
+
+    if args.command == "disable":
+        disable_plugin(args.cfg, args.plugin)
