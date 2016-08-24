@@ -112,3 +112,48 @@ def get_mod_entry(mod, cfg):
             output = entry
 
     return output
+
+
+def get_plugins(modlist):
+    """Get all plugins from a set of mods
+
+    :modlist: (list) List of OmwMod object.
+    :returns: (list) List of all plugins contained in these mods.
+    """
+    plugins = []
+    for mod in modlist:
+        if not mod.get_plugins():
+            continue
+
+        for plugin in mod.get_plugins():
+            plugins.append(plugin)
+
+    return plugins
+
+
+def get_enabled_plugins(cfg):
+    """Get a list of enabled plugins sorted by load order.
+
+    :cfg: (ConfigFile) openmw.cfg object.
+    :returns: (list) List of enabled plugins sorted by load order.
+    """
+    entries = cfg.find_key("content")
+    return [e.get_value() for e in entries]
+
+
+def get_disabled_plugins(cfg, modlist):
+    """Get a list of plugins that are installed by not enabled.
+
+    :cfg: (ConfigFile) openmw.cfg object.
+    :modlist: (List) List containig OmwMod objects.
+    :returns: (list)
+    """
+    enabled_plugins = get_enabled_plugins(cfg)
+    plugins = get_plugins(modlist)
+    disabled_plugins = []
+
+    for plugin in plugins:
+        if plugin not in enabled_plugins:
+            disabled_plugins.append(plugin)
+
+    return disabled_plugins
