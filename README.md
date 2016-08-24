@@ -20,10 +20,12 @@ optional arguments:
 Commands:
   <command>
     list                List installed mods
+    list-plugins        List plugins
     clean               Clean non existing mod dirs from openmw.cfg
     install             Install a directory as mod
     uninstall           Uninstall a mod directory
-
+    enable              Enable a plugin
+    disable             disable a plugin
 ```
 
 # WARNING
