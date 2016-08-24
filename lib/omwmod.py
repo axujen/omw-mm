@@ -158,3 +158,62 @@ class OmwMod(object):
 
         # This shouldn't happen
         raise ValueError("Could not find an entry for %s in %s" % (self.get_name(), cfg.file))
+
+    def plugin_is_enabled(self, plugin):
+        """Check if this mods plugin is enabled.
+
+        :plugin: (str) Full name of the plugin.
+        :returns: (bool)
+        :raises: (ValueError)
+        """
+        if not self.is_installed():
+            raise ValueError("Mod %s is not installed" % self.get_name())
+
+        if plugin not in self.get_plugins():
+            raise ValueError("Mod %s does not have a plugin named %s" % (self.get_name(), plugin))
+
+        entries = self.get_config().find_key("content")
+        for entry in entries:
+            if entry.get_value() == plugin:
+                return True
+
+        return False
+
+    def enable_plugin(self, plugin):
+        """Enable a plugin for this mod.
+
+        :plugin: (str) Full name of the plugin.
+        :raises: (ValueError)
+        """
+
+        if not self.is_installed():
+            raise ValueError("Cannot enable a plugin, mod %s is not installed" % self.get_name())
+
+        if plugin not in self.get_plugins():
+            raise ValueError("Mod %s does not have a plugin named %s" % (self.get_name(), plugin))
+
+        omw_cfg = self.get_config()
+        entry = ConfigEntry("content", plugin)
+        omw_cfg.append(entry)
+
+    def disable_plugin(self, plugin):
+        """Disable this mods plugin.
+
+        :plugin: (str) Full name of the plugin.
+        :raises: (ValueError)
+        """
+        if not self.is_installed():
+            raise ValueError("Cannot disable a plugin, mod %s is not installed" % self.get_name())
+
+        if plugin not in self.get_plugins():
+            raise ValueError("Mod %s does not have a plugin named %s" % (self.get_name(), plugin))
+
+        if not self.plugin_is_enabled(plugin):
+            raise ValueError("Plugin %s is already disabled" % plugin)
+
+        omw_cfg = self.get_config()
+        entries = omw_cfg.find_key("content")
+
+        for entry in entries:
+            if entry.value() == plugin:
+                omw_cfg.remove(entry)
