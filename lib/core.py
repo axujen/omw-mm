@@ -189,7 +189,7 @@ def disable_plugin(cfg, modlist, entry):
     """
 
     plugin = entry.get_value()
-    if plugin in get_disabled_plugins(cfg, modlist):
+    if plugin not in get_enabled_plugins(cfg):
         raise ValueError("Plugin %s is already disabled" % plugin)
 
     if plugin not in get_plugins(modlist):
