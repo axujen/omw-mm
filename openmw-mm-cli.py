@@ -203,9 +203,9 @@ def disable_plugin(omw_cfg, plugin):
         print("Plugin %s is already disabled!" % plugin)
         raise SystemExit(1)
 
-    if plugin not in core.get_plugins(mods):
-        print("Could not find plugin %s in any of the currently installed mods." % plugin)
-        raise SystemExit(1)
+    # if plugin not in core.get_plugins(mods):
+    #     print("Could not find plugin %s in any of the currently installed mods." % plugin)
+    #     raise SystemExit(1)
 
     print("Disabling %s" % plugin)
     entry = ConfigEntry("content", plugin, omw_cfg)

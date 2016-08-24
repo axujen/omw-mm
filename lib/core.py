@@ -192,7 +192,4 @@ def disable_plugin(cfg, modlist, entry):
     if plugin not in get_enabled_plugins(cfg):
         raise ValueError("Plugin %s is already disabled" % plugin)
 
-    if plugin not in get_plugins(modlist):
-        raise ValueError("No such plugin %s" % plugin)
-
     cfg.remove(entry)
