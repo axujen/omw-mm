@@ -1,4 +1,5 @@
 # ConfigEntry and ConfigFile are classes that describe the openmw.cfg file.
+# TODO: Refactor these classes, they are an ugly mess.
 
 
 class ConfigEntry(object):

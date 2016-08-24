@@ -1,12 +1,4 @@
 #!/usr/bin/env python2.7
-# TODO: This script needs to have the following functions
-#       x Install mods
-#       x List installed mods
-#       x Uninstall mods (optionally deleting the files)
-#       x Clean entries that reference non-existing mod directories
-#       - Enable/Disable plugins
-#       x Command-line argument parsing.
-
 import os
 from argparse import ArgumentParser
 from lib.omwconfig import ConfigFile, ConfigEntry
