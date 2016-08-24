@@ -12,8 +12,8 @@ def set_defaults(config):
     :returns: (ConfigParser)
     """
     if sys.platform == "win32":  # Windows
-        openmw_cfg = "%USERPROFILE%\My Games\openmw\openmw.cfg"
-        mods_dir = "%USERPROFILE%\Documents\My Games\openmw\mods"
+        openmw_cfg = "%USERPROFILE%\My Documents\My Games\openmw\openmw.cfg"
+        mods_dir = "%USERPROFILE%\My Documents\My Games\openmw\mods"
 
     elif sys.platform == "darwin":  # Mac
         openmw_cfg = "$HOME/Library/Preferences/openmw/openmw.cfg"
