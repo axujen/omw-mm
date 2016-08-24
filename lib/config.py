@@ -2,6 +2,32 @@
 from ConfigParser import SafeConfigParser
 import os.path
 import core
+import sys
+
+
+def set_defaults(config):
+    """Set default configuration options, taking into consideration different platforms.
+
+    :config: (ConfigParser) config object to populate
+    :returns: (ConfigParser)
+    """
+    if sys.platform == "win32":  # Windows
+        openmw_cfg = "%HOMEPATH%\Documents\My Games\openmw\openmw.cfg"
+        mods_dir = "%HOMEPATH%\Documents\My Games\openmw\mods"
+
+    elif sys.platform == "darwin":  # Mac
+        openmw_cfg = "$HOME/Library/Preferences/openmw/openmw.cfg"
+        mods_dir = "$HOME/Library/Preferences/openmw/mods"
+
+    else:  # Default to linux?
+        openmw_cfg = "$HOME/.config/openmw/openmw.cfg"
+        mods_dir = "$HOME/.local/share/openmw/mods"
+
+    config.add_section("General")
+    config.set("General", "openmw_cfg", core.get_full_path(openmw_cfg))
+    config.set("General", "mods_dir", core.get_full_path(mods_dir))
+
+    return config
 
 
 def init(path):
@@ -11,13 +37,11 @@ def init(path):
     :returns: (SafeConfigParser) Newly created config object.
     """
     config = SafeConfigParser()
+
     # Defaults
-    config.add_section("General")
-    config.set("General", "mods_dir", "~/.local/share/openmw/mods")
-    config.set("General", "openmw_cfg", "~/.config/openmw/openmw.cfg")
+    config = set_defaults(config)
 
     write_config(config, path)
-
     return config
 
 
