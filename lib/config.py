@@ -12,8 +12,8 @@ def set_defaults(config):
     :returns: (ConfigParser)
     """
     if sys.platform == "win32":  # Windows
-        openmw_cfg = "%HOMEPATH%\Documents\My Games\openmw\openmw.cfg"
-        mods_dir = "%HOMEPATH%\Documents\My Games\openmw\mods"
+        openmw_cfg = "%USERPROFILE%\My Games\openmw\openmw.cfg"
+        mods_dir = "%USERPROFILE%\Documents\My Games\openmw\mods"
 
     elif sys.platform == "darwin":  # Mac
         openmw_cfg = "$HOME/Library/Preferences/openmw/openmw.cfg"
@@ -45,13 +45,16 @@ def init(path):
     return config
 
 
+# TODO: Update this with crossplatform paths.
+# Better yet just stop doing this and store the config file next to the script
 def get_config_path():
     """Return the first path to an existing configuration file.
     If no file exists return the first one in the list of possible paths.
 
     :returns: (str) Absolute path to the config file.
     """
-    paths = ["./openmw-mm.cfg", "~/.config/openmw/openmw-mm.cfg"]
+    # paths = ["./openmw-mm.cfg", "~/.config/openmw/openmw-mm.cfg"]
+    paths = ["./openmw-mm.cfg"]
     for path in paths:
         path = core.get_full_path(path)
         if os.path.exists(path):
