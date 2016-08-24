@@ -187,14 +187,14 @@ class ConfigFile(object):
         """Return a ConfigFile object containing entries with matching key.
 
         :key: (str) name of the search key
-        :returns: ConfigFile object
-
+        :returns: (ConfigFile)
         """
 
         output = ConfigFile()
         for entry in self:
             if entry.get_key() == key:
-                output.append(entry)
+                entry.set_config(self)
+                output.__entries.append(entry)
 
         return output or None
 
@@ -202,13 +202,13 @@ class ConfigFile(object):
         """Return a ConfigFile object containing entries with matching value
 
         :value: (str) name of the search value
-        :returns: ConfigFile object
-
+        :returns: (ConfigFile)
         """
         output = ConfigFile()
         for entry in self:
             if entry.get_value(raw=True) == value:
-                output.append(entry)
+                entry.set_config(self)
+                output.__entries.append(entry)
 
         return output or None
 
