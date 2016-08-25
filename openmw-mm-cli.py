@@ -70,17 +70,23 @@ def uninstall_mod(omw_cfg, mod, rm=False):
 
     # Path given
     if os.path.sep in mod:
-        mod_obj = OmwMod(core.get_full_path((mod)))
-    else:  # Only a name was given
-        mods_dir = config.get("General", "mods_dir")
-        mod_obj = OmwMod(core.get_full_path((os.path.join(mods_dir, mod))))
+        mod_path = core.get_full_path(mod)
+    # Only a name was given
+    else:
+        mod_path = os.path.join(config.get("General", "mods_dir"), mod)
 
-    omw_cfg = ConfigFile(core.get_full_path(omw_cfg))
+    if not os.path.exists(mod_path):
+        print("No such file or directory %s. Try the clean command if the mod is already deleted" % mod)
+        raise SystemExit(1)
+
+    mod_obj = OmwMod(mod_path)
     entry = core.get_mod_entry(mod_obj, omw_cfg)
 
     if not entry:
         print("Could not find a reference to %s in openmw.cfg" % mod)
         raise SystemExit(0)
+
+    omw_cfg = ConfigFile(core.get_full_path(omw_cfg))
 
     print("Removing entry %s from openmw.cfg" % entry)
     omw_cfg.remove(entry)
