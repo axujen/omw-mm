@@ -251,21 +251,6 @@ def create_arg_parser(*args, **kwargs):
     parser.add_argument("-f", "--file", dest="cfg", metavar="file", default=omw_cfg,
             help="Path to openmw.cfg")
 
-    # List command
-    parser_l = subparser.add_parser('list', help="List installed mods")
-    parser_l.add_argument("dir", metavar="directory", nargs="?", default=None,
-            help="List only mods that exist in directory")
-    parser_l.add_argument("-s", "--showpath", action="store_true", dest="path", default=False,
-            help="Show paths instead of just names")
-
-    # List plugins
-    parser_lp = subparser.add_parser("list-plugins", help="List plugins")
-    parser_lp.add_argument("-t", "--tree", action="store_true", dest="tree",
-            default=False, help="List plugins in a tree view, showing their parent mods.")
-
-    # Clean command
-    subparser.add_parser('clean', help="Clean non existing mod dirs from openmw.cfg")
-
     # Install command.
     parser_i = subparser.add_parser("install", help="Install a directory as mod")
     parser_i.add_argument("src", metavar="directory",
@@ -292,6 +277,21 @@ def create_arg_parser(*args, **kwargs):
     # Disable command
     parser_dp = subparser.add_parser("disable", help="disable a plugin")
     parser_dp.add_argument("plugin", help="Full name of the plugin eg: Morrowind.esm")
+
+    # List command
+    parser_l = subparser.add_parser('list', help="List installed mods")
+    parser_l.add_argument("dir", metavar="directory", nargs="?", default=None,
+            help="List only mods that exist in directory")
+    parser_l.add_argument("-s", "--showpath", action="store_true", dest="path", default=False,
+            help="Show paths instead of just names")
+
+    # List plugins
+    parser_lp = subparser.add_parser("list-plugins", help="List plugins")
+    parser_lp.add_argument("-t", "--tree", action="store_true", dest="tree",
+            default=False, help="List plugins in a tree view, showing their parent mods.")
+
+    # Clean command
+    subparser.add_parser('clean', help="Clean non existing mod dirs from openmw.cfg")
 
     return parser
 
