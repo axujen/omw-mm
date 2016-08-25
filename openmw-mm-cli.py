@@ -137,6 +137,7 @@ def list_plugins(omw_cfg, tree=False):
     mods = [OmwMod(e.get_value(), e) for e in omw_cfg.find_key("data")]
 
     if tree:
+        printed = []
         for mod in mods:
             plugins = mod.get_plugins()
             if not plugins:  # Skip pluginless mods
@@ -149,7 +150,16 @@ def list_plugins(omw_cfg, tree=False):
                     else:
                         prefix = "-"
 
+                    printed.append(plugin)
                     print("\t%s %s" % (prefix, plugin))
+        # Print modless plugins
+        modless = True
+        for plugin in core.get_enabled_plugins(omw_cfg):
+            if plugin not in printed:
+                if modless:
+                    print("Orphaned Plugins (They don't belong to any mod listed in openmw.cfg):")
+                    modless = False
+                print("\t+ %s" % plugin)
     else:
         enabled_plugins = core.get_enabled_plugins(omw_cfg)
         disabled_plugins = core.get_disabled_plugins(omw_cfg)
