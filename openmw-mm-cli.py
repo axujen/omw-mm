@@ -60,11 +60,12 @@ def clean_mods(omw_cfg):
     return bad_entries
 
 
-def uninstall_mod(omw_cfg, mod, rm=False):
+def uninstall_mod(omw_cfg, mod, clean=False, rm=False):
     """Uninstall a mod by removing its entry from openmw.cfg
 
     :omw_cfg: (str) Path to openmw.cfg.
     :mod: (str) Name or path of the directory containing the mod.
+    :clean: (bool) If true then disable plugins that belong to the mod before uninstalling.
     :rm: (bool) If true then delete the mod directory. Default: False
     """
 
@@ -87,6 +88,13 @@ def uninstall_mod(omw_cfg, mod, rm=False):
         raise SystemExit(0)
 
     omw_cfg = ConfigFile(core.get_full_path(omw_cfg))
+
+    if clean and mod_obj.get_plugins():
+        for plugin in mod_obj.get_plugins():
+            if plugin in core.get_enabled_plugins(omw_cfg):
+                e = ConfigEntry("content", plugin, omw_cfg)
+                print("Disabling %s" % plugin)
+                core.disable_plugin(omw_cfg, e)
 
     print("Removing entry %s from openmw.cfg" % entry)
     omw_cfg.remove(entry)
@@ -274,6 +282,8 @@ def create_arg_parser(*args, **kwargs):
                     \n(NOTE: If only a name is given then only the configured mods_dir is checked)")
     parser_u.add_argument("-d", "--delete", action="store_true", dest="rm",
             help="Delete the directory (USE AT YOUR OWN RISK!)")
+    parser_u.add_argument("-c", "--clean", action="store_true", dest="clean",
+            help="Disable plugins for this mod before uninstalling")
 
     # Enable command
     parser_ep = subparser.add_parser("enable", help="Enable a plugin")
@@ -298,7 +308,7 @@ if __name__ == "__main__":
         install_mod(args.cfg, args.src, args.dest, args.force)
 
     if args.command == "uninstall":
-        uninstall_mod(args.cfg, args.mod, args.rm)
+        uninstall_mod(args.cfg, args.mod, args.clean, args.rm)
 
     if args.command == "list-plugins":
         list_plugins(args.cfg, args.tree)
