@@ -163,15 +163,14 @@ def get_enabled_plugins(cfg):
     return [e.get_value() for e in entries]
 
 
-def get_disabled_plugins(cfg, modlist):
-    """Get a list of plugins that are installed by not enabled.
+def get_disabled_plugins(cfg):
+    """Get a list of plugins that are installed but not enabled.
 
     :cfg: (ConfigFile) openmw.cfg object.
-    :modlist: (List) List containig OmwMod objects.
     :returns: (list)
     """
     enabled_plugins = get_enabled_plugins(cfg)
-    plugins = get_plugins(modlist)
+    plugins = get_plugins(cfg)
     disabled_plugins = []
 
     for plugin in plugins:
@@ -181,16 +180,15 @@ def get_disabled_plugins(cfg, modlist):
     return disabled_plugins
 
 
-def enable_plugin(cfg, modlist, entry):
+def enable_plugin(cfg, entry):
     """Enable a plugin by creating a new entry for it in openmw.cfg
 
     :cfg: (ConfigFile) openmw.cfg object.
-    :modlist: (list) List of currently installed mods
     :entry: (ConfigEntry) config entry for the plugin.
     :raises: (ValueError)
     """
     plugin = entry.get_value()
-    if plugin not in get_plugins(modlist):
+    if plugin not in get_plugins(cfg):
         raise ValueError("No such plugin %s" % plugin)
 
     if plugin in get_enabled_plugins(cfg):
@@ -201,17 +199,17 @@ def enable_plugin(cfg, modlist, entry):
     cfg.insert(index + 1, entry)
 
 
-def disable_plugin(cfg, modlist, entry):
+def disable_plugin(cfg, entry):
     """Disable a plugin from openmw.cfg
 
     :cfg:  (ConfigFile) openmw.cfg object.
-    :modlist: (list) List of currently installed mods.
     :entry:  (ConfigEntry) Plugins config entry.
     :raises: (ValueError)
     """
-
     plugin = entry.get_value()
-    if plugin not in get_enabled_plugins(cfg):
+    if plugin not in get_plugins(cfg):
+        raise ValueError("No such plugin %s" % plugin)
+    if plugin in get_disabled_plugins(cfg):
         raise ValueError("Plugin %s is already disabled" % plugin)
 
     cfg.remove(entry)
