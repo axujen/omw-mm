@@ -126,19 +126,29 @@ def get_mod_entry(mod, cfg):
     return output
 
 
-def get_plugins(modlist):
-    """Get all plugins from a set of mods
+def get_plugins(cfg):
+    """Get all plugins for installed mods and the ones referenced in openmw.cfg
 
-    :modlist: (list) List of OmwMod object.
+    :cfg: (ConfigFile) openmw.cfg object
     :returns: (list) List of all plugins contained in these mods.
     """
+    mods = [OmwMod(e.get_value(), e) for e in cfg.find_key("data")]
     plugins = []
-    for mod in modlist:
+    for mod in mods:
         if not mod.get_plugins():
             continue
 
         for plugin in mod.get_plugins():
             plugins.append(plugin)
+
+    # Merge with enabled plugins, since a plugin could be not installed but still
+    # has a reference in openmw.cfg
+    enabled_plugins = get_enabled_plugins(cfg)
+    if enabled_plugins:
+        plugins += [p for p in enabled_plugins if p not in plugins]
+        # for plugin in enabled_plugins:
+        #     if plugin not in plugins:
+        #         plugins.append(plugin)
 
     return plugins
 
