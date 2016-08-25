@@ -122,7 +122,7 @@ class OmwMod(object):
                 continue
 
             for ext in plugin_extensions:
-                if file.endswith(ext):
+                if file.lower().endswith(ext):
                     plugins.append(file)
 
         return plugins
