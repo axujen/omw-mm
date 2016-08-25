@@ -1,6 +1,7 @@
 # Core functions used in both CLI and GUI
 import os
 import shutil
+from omwmod import OmwMod
 
 
 def is_mod_dir(dir):
