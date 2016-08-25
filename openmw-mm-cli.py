@@ -152,7 +152,7 @@ def list_plugins(omw_cfg, tree=False):
                     print("\t%s %s" % (prefix, plugin))
     else:
         enabled_plugins = core.get_enabled_plugins(omw_cfg)
-        disabled_plugins = core.get_disabled_plugins(omw_cfg, mods)
+        disabled_plugins = core.get_disabled_plugins(omw_cfg)
 
         if enabled_plugins:
             i = 1
@@ -172,20 +172,19 @@ def enable_plugin(omw_cfg, plugin):
     """
 
     omw_cfg = ConfigFile(core.get_full_path(omw_cfg))
-    mods = [OmwMod(e.get_value(), e) for e in omw_cfg.find_key("data")]
 
     if plugin in core.get_enabled_plugins(omw_cfg):
         print("Plugin %s is already enabled!" % plugin)
         raise SystemExit(1)
 
-    if plugin not in core.get_disabled_plugins(omw_cfg, mods):
+    if plugin not in core.get_disabled_plugins(omw_cfg):
         print("Could not find plugin %s in any of the currently installed mods" % plugin)
         raise SystemExit(1)
 
     entry = ConfigEntry("content", plugin, omw_cfg)
 
     print("Enabling %s" % plugin)
-    core.enable_plugin(omw_cfg, mods, entry)
+    core.enable_plugin(omw_cfg, entry)
     omw_cfg.write()
 
 
@@ -197,7 +196,6 @@ def disable_plugin(omw_cfg, plugin):
     """
 
     omw_cfg = ConfigFile(core.get_full_path(omw_cfg))
-    mods = [OmwMod(e.get_value(), e) for e in omw_cfg.find_key("data")]
 
     if plugin in core.get_disabled_plugins(omw_cfg, mods):
         print("Plugin %s is already disabled!" % plugin)
@@ -209,7 +207,7 @@ def disable_plugin(omw_cfg, plugin):
 
     print("Disabling %s" % plugin)
     entry = ConfigEntry("content", plugin, omw_cfg)
-    core.disable_plugin(omw_cfg, mods, entry)
+    core.disable_plugin(omw_cfg, entry)
 
     omw_cfg.write()
 
