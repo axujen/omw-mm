@@ -1,7 +1,9 @@
 # Core functions used in both CLI and GUI
 import os
+import sys
 import shutil
 from omwmod import OmwMod
+from esm import Esm
 
 
 def is_mod_dir(dir):
@@ -146,9 +148,6 @@ def get_plugins(cfg):
     enabled_plugins = get_enabled_plugins(cfg)
     if enabled_plugins:
         plugins += [p for p in enabled_plugins if p not in plugins]
-        # for plugin in enabled_plugins:
-        #     if plugin not in plugins:
-        #         plugins.append(plugin)
 
     return plugins
 
@@ -213,3 +212,27 @@ def disable_plugin(cfg, entry):
         raise ValueError("Plugin %s is already disabled" % plugin)
 
     cfg.remove(entry)
+
+
+def merge_levlists(plugins, output):
+    """Merge a leveled lists for a list of plugins
+
+    :cfg: (ConfigFile) openmw.cfg object
+    :plugins: (list) List of Esm objects
+    :output: (str) Path to output file
+    """
+
+    levc = []  # Creature lists
+    levi = []  # Item lists
+
+    # Merge all records
+    for esm in plugins:
+        esm.read()
+        levc += esm.find_records("LEVC")
+        levi += esm.find_records("LEVL")
+
+    # And dump into a file
+    mash = Esm(os.path.join(sys.path[0], "./empty.esp"))
+    mash.read()
+    mash.records += levi + levc
+    mash.write(output)

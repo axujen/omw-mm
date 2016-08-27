@@ -3,6 +3,7 @@ import os
 from argparse import ArgumentParser
 from lib.omwconfig import ConfigFile, ConfigEntry
 from lib.omwmod import OmwMod
+from lib.esm import Esm
 from lib.config import config
 from lib import core
 
@@ -235,6 +236,32 @@ def disable_plugin(omw_cfg, plugin):
     omw_cfg.write()
 
 
+def merge_lists(omw_cfg, out=None):
+    """Merge leveled lists for every enabled plugin.
+
+    :omw_cfw: (str) Path to openmw.cfg
+    :out: (str) Path to output file. Default: ./merged.esp
+    """
+
+    if not out:
+        out = "./merged.esp"
+
+    cfg = ConfigFile(omw_cfg)
+    mods = [OmwMod(e.get_value(), e) for e in cfg.find_key("data")]
+    plugins_esm = []
+    blacklist = config.get("General", "never_merge").split(",")
+    print(blacklist)
+    for mod in mods:
+        plugins = mod.get_plugins()
+        if plugins:
+            for plugin in plugins:
+                if plugin not in blacklist and mod.plugin_is_enabled(plugin):
+                    print("Merging: %s" % plugin)
+                    plugins_esm.append(Esm(os.path.join(mod.get_path(), plugin)))
+
+    core.merge_levlists(plugins_esm, out)
+
+
 def create_arg_parser(*args, **kwargs):
     """Create the argument parser.
 
@@ -293,6 +320,11 @@ def create_arg_parser(*args, **kwargs):
     # Clean command
     subparser.add_parser('clean', help="Clean non existing mod dirs from openmw.cfg")
 
+    # Merge command
+    subparser_m = subparser.add_parser("merge", help="Merge all leveled lists into one file")
+    subparser_m.add_argument("-o", "--output", metavar="output", default=None, dest="out",
+            help="Destination of the merged esp. Default: ./merged.esp")
+
     return parser
 
 if __name__ == "__main__":
@@ -318,3 +350,6 @@ if __name__ == "__main__":
 
     if args.command == "disable":
         disable_plugin(args.cfg, args.plugin)
+
+    if args.command == "merge":
+        merge_lists(args.cfg, args.out)
