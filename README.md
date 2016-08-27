@@ -28,15 +28,19 @@ optional arguments:
 
 Commands:
   <command>
-    list                List installed mods
-    list-plugins        List plugins
-    clean               Clean non existing mod dirs from openmw.cfg
     install             Install a directory as mod
     uninstall           Uninstall a mod directory
     enable              Enable a plugin
     disable             disable a plugin
+    list                List installed mods
+    list-plugins        List plugins
+    clean               Clean non existing mod dirs from openmw.cfg
+    merge               Merge all leveled lists into one file
 ```
 Run openmw-mm-cli.py command --help for additional help about each command.
+
+# NOTE
+The merge command is very simple at the moment, it does not actuallly merge leveled lists, instead it adds them, all of them into a single file, so you will probably end up with duplicate records. Please contact me if you have any ideas on how to improve this feature.
 
 # WARNING
 Backup your openmw.cfg file and even your mods directory, this project is in early developement and may (i should say will) cause damage.
