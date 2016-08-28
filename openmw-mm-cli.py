@@ -81,6 +81,7 @@ def uninstall_mod(omw_cfg, mod, clean=False, rm=False):
         print("No such file or directory %s. Try the clean command if the mod is already deleted" % mod)
         raise SystemExit(1)
 
+    omw_cfg = ConfigFile(core.get_full_path(omw_cfg))
     mod_obj = OmwMod(mod_path)
     entry = core.get_mod_entry(mod_obj, omw_cfg)
 
@@ -88,7 +89,6 @@ def uninstall_mod(omw_cfg, mod, clean=False, rm=False):
         print("Could not find a reference to %s in openmw.cfg" % mod)
         raise SystemExit(0)
 
-    omw_cfg = ConfigFile(core.get_full_path(omw_cfg))
 
     if clean and mod_obj.get_plugins():
         for plugin in mod_obj.get_plugins():
