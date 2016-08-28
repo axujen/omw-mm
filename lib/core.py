@@ -232,7 +232,17 @@ def merge_levlists(plugins, output):
         levi += esm.find_records("LEVL")
 
     # And dump into a file
-    mash = Esm(os.path.join(sys.path[0], "./empty.esp"))
+    mash = Esm(os.path.join(get_base_dir, "./empty.esp"))
     mash.read()
     mash.records += levi + levc
     mash.write(output)
+
+
+def get_base_dir():
+    """Return the path of the base directory where the script is located.
+    This should be the directory where lib exists.
+
+    :return: (str) Path
+    """
+    # os.path.realpath to resolve symlinks
+    return os.path.realpath(sys.path[0])

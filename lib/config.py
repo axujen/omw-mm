@@ -54,8 +54,7 @@ def get_config_path():
 
     :returns: (str) Absolute path to the config file.
     """
-    # paths = ["./openmw-mm.cfg", "~/.config/openmw/openmw-mm.cfg"]
-    paths = [os.path.join(sys.path[0], "./openmw-mm.cfg")]
+    paths = [os.path.join(core.get_base_dir(), "./openmw-mm.cfg")]
     for path in paths:
         path = core.get_full_path(path)
         if os.path.exists(path):
