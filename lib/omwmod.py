@@ -229,7 +229,7 @@ class OmwPlugin(object):
 
         cfg = self.get_config()
         entry = omwconfig.ConfigEntry("content", self.get_name())
-        cfg.append(entry)
+        cfg.add_entry(entry)
 
     def disable(self):
         """Disable the plugin by removing its content entry from openmw.cfg"""

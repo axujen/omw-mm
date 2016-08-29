@@ -127,24 +127,24 @@ def install_mod(omw_cfg, src, dest, force=False):
         print('%s is not a directory.' % src)
         raise SystemExit(1)
 
-    if core.is_mod_dir(src_dir) or force:
-        if os.path.exists(os.path.join(dest_dir, os.path.basename(src))):
-            print("A file %s already exists in %s. Try renaming the mod or supplying a different destination."
-                  % (os.path.basename(src), dest_dir))
-            raise SystemExit(0)
-
-        # Copy the mod
-        print("Copying %s to %s" % (src_dir, dest_dir))
-        new_dir = core.copy_to_mod_dir(src_dir, dest_dir)
-
-        # Add an entry
-        entry = ConfigEntry("data", new_dir)
-        print("Adding entry %s to openmw.cfg" % entry)
-        core.insert_data_entry(entry, omw_cfg)
-        omw_cfg.write()
-    else:
-        print('Directory %s is not a mod directory! Use -f to force.' % src)
+    if not core.is_mod_dir(src_dir) and not force:
+        print("%s is not detected as a mod directory, if you wish to install it anyway use the --force flag" % src)
         raise SystemExit(1)
+
+    if os.path.exists(os.path.join(dest_dir, os.path.basename(src))):
+        print("A file %s already exists in %s. Try renaming the mod or supplying a different destination."
+              % (os.path.basename(src), dest_dir))
+        raise SystemExit(1)
+
+    # Copy the mod
+    print("Copying %s to %s" % (src_dir, dest_dir))
+    new_dir = core.copy_to_mod_dir(src_dir, dest_dir)
+
+    # Add an entry
+    entry = ConfigEntry("data", new_dir)
+    print("Adding entry %s to openmw.cfg" % entry)
+    omw_cfg.add_entry(entry)
+    omw_cfg.write()
 
 
 def list_plugins(omw_cfg, tree=False):

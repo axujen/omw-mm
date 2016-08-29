@@ -44,24 +44,6 @@ def copy_to_mod_dir(dir, dest):
     return new_dir
 
 
-# TODO: Remove this in favor of install_mod method in ConfigFile
-def get_latest_key_index(key, cfg):
-    """Get the index of the last :key: entry in openmw.cfg.
-
-    :key: (str) Name of the key that needs to be indexed
-    :cfg: (ConfigFile) openmw.cfg object.
-    :returns: (int)
-    """
-    i = 0
-    index = None
-    for entry in cfg:
-        if entry.get_key() == key:
-            index = i
-        i += 1
-
-    return index
-
-
 def get_full_path(path):
     """Return the full expanded path of :path:.
 
@@ -80,20 +62,6 @@ def get_full_path(path):
     path = os.path.normcase(path)
 
     return path
-
-
-# TODO: Remove this, in favor of install_mod method in ConfigFile
-def insert_data_entry(entry, cfg):
-    """Insert a data entry into openmw.cfg.
-
-    :entry: (ConfigEntry) openmw.cfg entry object.
-    :cfg: (ConfigFile) openmw.cfg config object.
-    :returns: (int) Index of the new appended entry.
-    """
-    index = get_latest_key_index("data", cfg) + 1
-    cfg.insert(index, entry)
-
-    return index
 
 
 # TODO: Make this function safer.
@@ -177,7 +145,6 @@ def get_orphaned_plugins(cfg):
     return orphaned
 
 
-# TODO: This function should be a ConfigFile method (Operation refactor ConfigFile?)
 def find_plugin(cfg, plugin_name):
     """Find an installed plugin by name
 

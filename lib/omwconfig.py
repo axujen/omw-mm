@@ -212,6 +212,23 @@ class ConfigFile(object):
     def append(self, entry):
         return self.insert(len(self.get_entries()), entry)
 
+    def add_entry(self, entry):
+        """Add an entry to the config file, unlike append this method will insert
+        the entry near other entries of the same key.
+
+        :entry: (ConfigEntry) Entry to be added.
+        """
+        if not isinstance(entry, ConfigEntry):
+            raise ValueError("Expecting ConfigEntry object. got %s" % entry)
+
+        key = entry.get_key()
+        entries = self.find_key(key)
+        if entries:  # If entries with the same key exist then append to bottom of that list
+            index = self.get_entries().index(entries[-1]) + 1
+        else:  # Append in the bottom of the config
+            index = len(self.get_entries())
+
+        self.insert(index, entry)
 
     def _parse(self):
         """Read and parse openmw.cfg"""
