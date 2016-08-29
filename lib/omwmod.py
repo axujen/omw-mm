@@ -12,6 +12,7 @@ class OmwMod(object):
         :path: (str) Absolute path to the mod.
         :entry: (ConfigEntry) Mods config entry. Default: None
         """
+        self._entry = None
         self.init(path=path, entry=entry)
 
     def init(self, path=None, entry=None):
