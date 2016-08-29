@@ -135,7 +135,7 @@ class ConfigFile(object):
     """
 
     def __init__(self, file=None):
-        self.__entries = []
+        self._entries = []
         self._mods = []
         if file:
             self.file = file
@@ -144,10 +144,10 @@ class ConfigFile(object):
     def __contains__(self, entry):
         if not isinstance(entry, ConfigEntry):
             raise ValueError("ConfigFile can only contain ConfigEntry objects, got %s" % entry.__class__.__name__)
-        return self.__entries.__contains__(entry)
+        return self.get_entries().__contains__(entry)
 
     def __iter__(self, *args, **kwargs):
-        return self.__entries.__iter__(*args, **kwargs)
+        return self.get_entries().__iter__(*args, **kwargs)
 
     def tostring(self):
         """Convert entries into a string ready to save on disk."""
@@ -171,6 +171,13 @@ class ConfigFile(object):
         """
         return [e for e in self if e.get_value() == value]
 
+    def get_entries(self):
+        """Get the list of entries in the config file
+
+        :returns: (list)
+        """
+        return self._entries
+
     def get_mods(self):
         """Get the list of installed mods
 
@@ -191,7 +198,7 @@ class ConfigFile(object):
             raise ValueError("Entry: '%s' not in config file" % entry)
 
         entry.set_config(None)
-        self.__entries.remove(entry)
+        self.get_entries().remove(entry)
 
     def insert(self, index, entry):
         if not isinstance(entry, ConfigEntry):
@@ -200,10 +207,11 @@ class ConfigFile(object):
             raise ValueError("Entry '%s' is already in openmw.cfg" % entry)
 
         entry.set_config(self)
-        return self.__entries.insert(index, entry)
+        return self.get_entries().insert(index, entry)
 
     def append(self, entry):
-        return self.insert(len(self.__entries), entry)
+        return self.insert(len(self.get_entries()), entry)
+
 
     def _parse(self):
         """Read and parse openmw.cfg"""
