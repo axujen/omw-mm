@@ -1,5 +1,5 @@
 import os
-from omwconfig import ConfigEntry
+import omwconfig
 
 
 # OmwMod class that contains usefull info about a given mod.
@@ -30,7 +30,7 @@ class OmwMod(object):
         if not os.path.isabs(path):
             raise ValueError("Path must be an absolute path. got %s" % path)
 
-        if entry and not isinstance(entry, ConfigEntry):
+        if entry and not isinstance(entry, omwconfig.ConfigEntry):
             raise ValueError("Entry must be a ConfigEntry object. got %s" % entry)
 
         self._path = path
@@ -228,7 +228,7 @@ class OmwPlugin(object):
             raise ValueError("Plugin %s is already enabled" % self.get_name())
 
         cfg = self.get_config()
-        entry = ConfigEntry("content", self.get_name())
+        entry = omwconfig.ConfigEntry("content", self.get_name())
         cfg.append(entry)
 
     def disable(self):

@@ -1,5 +1,6 @@
 # ConfigEntry and ConfigFile are classes that describe the openmw.cfg file.
 # TODO: Refactor these classes, they are an ugly mess.
+import omwmod
 
 
 class ConfigEntry(object):
@@ -135,6 +136,7 @@ class ConfigFile(object):
 
     def __init__(self, file=None):
         self.__entries = []
+        self._mods = []
         if file:
             self.file = file
             self._parse()
@@ -181,6 +183,13 @@ class ConfigFile(object):
 
         return output or None
 
+    def get_mods(self):
+        """Get the list of installed mods
+
+        :returns: (list)
+        """
+        return self._mods
+
     def remove(self, entry):
         """Remove entry from ConfigFile.
 
@@ -220,7 +229,13 @@ class ConfigFile(object):
                 if line.isspace():
                     continue
 
-                self.append(ConfigEntry(line, config=self))
+                entry = ConfigEntry(line, config=self)
+                self.append(entry)
+
+                # Create and keep track of mod objects
+                if entry.get_key() == "data":
+                    mod = omwmod.OmwMod(entry.get_value(), entry)
+                    self._mods.append(mod)
 
     def write(self, path=None):
         """Save the config file to a location on disk.
