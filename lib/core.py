@@ -89,7 +89,7 @@ def get_plugins(cfg):
     mods = cfg.get_mods()
     plugins = []
     for mod in mods:
-        if not mod.get_plugins():
+        if not mod.is_installed():
             continue
 
         for plugin in mod.get_plugins():
