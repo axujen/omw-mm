@@ -2,7 +2,6 @@
 import os
 from argparse import ArgumentParser
 from lib.omwconfig import ConfigFile, ConfigEntry
-from lib.omwmod import OmwMod
 from lib.esm import Esm
 from lib.config import config
 from lib import core
@@ -17,18 +16,11 @@ def list_mods(omw_cfg, mods_dir=None, path=False):
     """
 
     omw_cfg = ConfigFile(core.get_full_path(omw_cfg))
+    mods = omw_cfg.get_mods()
 
     if mods_dir:
-        entries = ConfigFile()
         mods_dir = core.get_full_path(mods_dir)
-        for entry in omw_cfg.find_key("data"):
-            if os.path.dirname(entry.get_value()) == mods_dir:
-                entries.append(entry)
-
-    else:
-        entries = omw_cfg.find_key("data")
-
-    mods = [OmwMod(entry.get_value()) for entry in entries]
+        mods = [m for m in mods if os.path.dirname(m.get_path()) == mods_dir]
 
     if path:
         for mod in mods:
@@ -72,50 +64,51 @@ def clean_mods(omw_cfg):
 
 # TODO: Autoclean and Autodelete options in the config.
 # Maybe not Autodelete?
-def uninstall_mod(omw_cfg, mod, clean=False, rm=False):
+def uninstall_mod(omw_cfg, mod_name, clean=False, rm=False):
     """Uninstall a mod by removing its entry from openmw.cfg
 
     :omw_cfg: (str) Path to openmw.cfg.
-    :mod: (str) Name or path of the directory containing the mod.
+    :mod_name: (str) Name or path of the directory containing the mod.
     :clean: (bool) If true then disable plugins that belong to the mod before uninstalling.
     :rm: (bool) If true then delete the mod directory. Default: False
     """
 
     # Path given
-    if os.path.sep in mod:
-        mod_path = core.get_full_path(mod)
+    if os.path.sep in mod_name:
+        mod_path = core.get_full_path(mod_name)
     # Only a name was given
     else:
-        mod_path = os.path.join(config.get("General", "mods_dir"), mod)
+        mod_path = os.path.join(config.get("General", "mods_dir"), mod_name)
 
     if not os.path.exists(mod_path):
-        print("No such file or directory %s. Try the clean command if the mod is already deleted" % mod)
+        print("No such file or directory %s. Try the clean command if the mod is already deleted" % mod_name)
         raise SystemExit(1)
 
     omw_cfg = ConfigFile(core.get_full_path(omw_cfg))
-    entry = core.get_mod_entry(mod_path, omw_cfg)
 
-    if not entry:
-        print("Could not find a reference to %s in openmw.cfg" % mod)
-        raise SystemExit(0)
-
-    mod_obj = OmwMod(mod_path, entry)
+    for mod in omw_cfg.get_mods():
+        if mod.get_path() == mod_path:
+            mod = mod
+            break
+    else:
+        print("Could not find any reference to %s, are you sure its installed?" % mod_name)
+        raise SystemExit(1)
 
     if clean:
-        plugins = mod_obj.get_plugins()
+        plugins = mod.get_plugins()
         if plugins:
             for plugin in plugins:
                 if plugin.is_enabled():
                     print("Disabling %s" % plugin.get_name())
                     plugin.disable()
 
-    print("Removing entry %s from openmw.cfg" % entry)
-    omw_cfg.remove(entry)
+    print("Removing entry %s from openmw.cfg" % mod.get_entry())
+    omw_cfg.remove(mod.get_entry())
     omw_cfg.write()
 
     if rm:
-        print("Deleting mod in %s" % entry.get_value())
-        core.rm_mod_dir(entry.get_value())
+        print("Deleting mod in %s" % mod.get_path())
+        core.rm_mod_dir(mod.get_path())
 
 
 def install_mod(omw_cfg, src, dest, force=False):
@@ -164,7 +157,7 @@ def list_plugins(omw_cfg, tree=False):
     omw_cfg = ConfigFile(core.get_full_path(omw_cfg))
 
     if tree:
-        mods = [OmwMod(e.get_value(), e) for e in omw_cfg.find_key("data")]
+        mods = omw_cfg.get_mods()
         for mod in mods:
             plugins = mod.get_plugins()
             if not plugins:  # Skip modless plugins
@@ -250,7 +243,7 @@ def merge_lists(omw_cfg, out=None):
         out = "./merged.esp"
 
     cfg = ConfigFile(omw_cfg)
-    mods = [OmwMod(e.get_value(), e) for e in cfg.find_key("data")]
+    mods = cfg.get_mods()
     plugins_esm = []
     blacklist = config.get("General", "never_merge").split(",")
     print(blacklist)

@@ -2,7 +2,6 @@
 import os
 import sys
 import shutil
-from omwmod import OmwMod
 from esm import Esm
 
 
@@ -112,25 +111,6 @@ def rm_mod_dir(mod_dir):
     shutil.rmtree(mod_dir)
 
 
-# TODO: This shouldn't be necessary. ConfigFile should store mods (along with their entries)
-def get_mod_entry(mod_path, cfg):
-    """Try to find a mods config entry in openmw.cfg
-
-    :mod_path: (str) Path to the installed mod.
-    :cfg: (ConfigFile) openmw.cfg object.
-    :returns: (ConfigEntry or None) Config entry referencing the mod. Or None if no entry could be found
-    """
-
-    output = None
-    entries = cfg.find_key("data")
-
-    for entry in entries:
-        if mod_path == entry.get_value():
-            output = entry
-
-    return output
-
-
 # TODO: Deal with plugins who's mods have been uninstalled.
 def get_plugins(cfg):
     """Get all plugins enabled and disabled plugins.
@@ -139,7 +119,7 @@ def get_plugins(cfg):
     :cfg: (ConfigFile) openmw.cfg object.
     :returns: (list) list of all plugin objects referenced in openmw.cfg.
     """
-    mods = [OmwMod(e.get_value(), e) for e in cfg.find_key("data")]
+    mods = cfg.get_mods()
     plugins = []
     for mod in mods:
         if not mod.get_plugins():
@@ -204,7 +184,7 @@ def find_plugin(cfg, plugin_name):
     :plugin_name: (str) Plugin name
     :returns: (OmwPlugin or None)
     """
-    mods = [OmwMod(e.get_value(), e) for e in cfg.find_key("data")]
+    mods = cfg.get_mods()
     for mod in mods:
         plugins = mod.get_plugins()
         if not plugins:
