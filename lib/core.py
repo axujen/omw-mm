@@ -79,7 +79,6 @@ def rm_mod_dir(mod_dir):
     shutil.rmtree(mod_dir)
 
 
-# TODO: Deal with plugins who's mods have been uninstalled.
 def get_plugins(cfg):
     """Get all plugins enabled and disabled plugins.
     Note: this wont return orphaned plugins since they can't have a plugin object.
