@@ -21,10 +21,10 @@ class OmwMod(object):
         self.__files = None
         self.__plugins = None
 
-        self.reset(path=path, entry=entry)
+        self.init(path=path, entry=entry)
 
-    def reset(self, path=None, entry=None):
-        """Change the mods path or entry and update all other attributes.
+    def init(self, path=None, entry=None):
+        """Init the instance with new values.
 
         :path: (str) Absolute path to the mod. Default: Current path
         :entry: (ConfigEntry) Mods config entry. Default: Current entry
