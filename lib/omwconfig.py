@@ -6,7 +6,7 @@ import omwmod
 class ConfigEntry(object):
     """OpenMW config entry.
 
-    If value is ommitted then key is parsed to determine the type.
+    If value is ommitted then key is parsed as a raw line (key=value).
 
     :key:   (str) Line from openmw.cfg as is.
     :value: (str) Value of key, Default: None.
@@ -16,18 +16,77 @@ class ConfigEntry(object):
 
     # TODO: Redo init, it looks like a mess.
     def __init__(self, key, value=None, config=None):
-        if not value:
-            key, value, type = self.__parse_line(key)
+        if not value:  # Value was not given so assuming key is a raw line
+            key, value, entry_type = self._parse_line(key)
         else:
-            type = "SETTING"
+            entry_type = "SETTING"
 
+        self._config = config
+        self._type = entry_type
+        self._key, self._value = self._parse_key_value(key, value)
+
+    def __str__(self):
+        entry_type = self.get_type()
+        if entry_type == "COMMENT":
+            return "#" + self.get_value()
+        elif entry_type == "BLANK":
+            return self.get_value()
+        elif entry_type == "SETTING":
+            return "=".join([self.get_key(), self.get_value(raw=True)])
+        else:  # Unrecognized type? Raise an error.
+            raise ValueError("Entry has an unrecognized type %s" % entry_type)
+
+    def __eq__(self, other):
+        """Compare entries by key and value"""
+        key_match = self.get_key() == other.get_key()
+        value_match = self.get_value() == other.get_value()
+        return key_match and value_match
+
+    def _parse_line(self, line):
+        """Parse openmw.cfg line entry
+
+        :line: (str): Raw line from openmw.cfg
+        :returns: (set) key, value, type
+        :raises: (ValueError)
+        """
+        # TODO: Add support for categories either here or in ConfigFile()
+        # to support settings.cfg in the future.
+        # for now keep it simple
+        if line.isspace():  # Entry is blank
+            entry_type = "BLANK"
+            key = None
+            value = line
+            return [key, value, entry_type]
+
+        if line.startswith("#"):  # Entry is a comment
+            entry_type = "COMMENT"
+            key = None
+            value = line[1:]
+
+            return [key, value, entry_type]
+
+        # Other than comments only accept key=value entries.
+        # May expand this class later to support settings.cfg [Sections]
+        if len(line) < 3 or "=" not in line:
+            raise ValueError("Invalid config entry '%s'" % line)
+
+        entry_type = "SETTING"
+        key, value = line.split("=")
+        return (key.strip(), value.strip(), entry_type)
+
+    def _parse_key_value(self, key, value):
+        """Parse a key, value pair and return normalized entries.
+
+        :key: (str)
+        :value: (str)
+        :returns: (set)
+        """
         # Entry keys cannot (or should not?) contain comments
         if "#" in key:
             raise ValueError("Entry key cannot contain a comment. got '%s'" % key)
 
         # Strip comments from values and raise an error if value
         # turns out to be empty
-        # TODO: Preserve comments in their own variable.
         old_value = value
         value = value.split("#")[0].strip()
         if not value:
@@ -39,59 +98,15 @@ class ConfigEntry(object):
                 # then quote it for internal storage.
                 value = '"%s"' % value
 
-        self.set_config(config)
-        self.__key = key
-        self.__value = value
-        self.__type = type
-
-    def __str__(self):
-        if self.get_type() == "COMMENT":
-            return "#" + self.get_value()
-        else:
-            return "=".join([self.get_key(), self.get_value(raw=True)])
-
-    __repr__ = __str__
-
-    def __eq__(self, other):
-        return str(self) == str(other)
-
-    def __parse_line(self, line):
-        """Parse openmw.cfg line entry
-
-        :line: (str): Raw line from openmw.cfg
-        :returns: (list) [key, value, type].
-        :raises: (ValueError)
-        """
-
-        # TODO: Add support for categories either here or in ConfigFile()
-        # to support settings.cfg in the future.
-        # for now keep it simple
-        if line.isspace():
-            raise ValueError("Config entry cannot be blank line.")
-
-        if line[0] == "#":
-            type = key = "COMMENT"
-            value = line[1:]
-
-            return [key, value, type]
-
-        # Other than comments only accept key=value entries.
-        # May expand this class later to support settings.cfg [Sections]
-        if len(line) < 3 or "=" not in line:
-            raise ValueError("Invalid config entry '%s'" % line)
-
-        type = "SETTING"
-        key, value = line.split("=")
-        return [key.strip(), value.strip(), type]
+        return (key, value)
 
     def get_key(self, raw=False):
         """Return the entry key.
 
         :raw: (bool) if True return self.__key directly without processing
         :returns: (str)
-
         """
-        return self.__key
+        return self._key
 
     def get_value(self, raw=False):
         """Return the entry value.
@@ -99,33 +114,33 @@ class ConfigEntry(object):
         :raw: (bool) if True return self.__value directly without processing
         :returns: (str)
         """
-        if self.__key == "data" and not raw:
-            return self.__value.strip('"')
+        if self.get_key() == "data" and not raw:
+            return self._value.strip('"')
 
-        return self.__value
+        return self._value
 
     def set_config(self, config):
-        """Set the entry config object
+        """Set the ConfigFile object this entry belongs to.
 
-        :config: (ConfigFile) openmw.cfg object.
+        :config: (ConfigFile or None)
         """
         if config is not None and not isinstance(config, ConfigFile):
             raise ValueError("config must be a ConfigFile object. got %s" % config)
-        self.__config = config
+        self._config = config
 
     def get_config(self):
         """Get the entry config object.
 
         :returns: (ConfigFile) openmw.cfg object
         """
-        return self.__config
+        return self._config
 
     def get_type(self):
         """Return the entry type.
 
         :returns: (string)
         """
-        return self.__type
+        return self._type
 
 
 class ConfigFile(object):
@@ -152,7 +167,7 @@ class ConfigFile(object):
     def tostring(self):
         """Convert entries into a string ready to save on disk."""
 
-        return "\n".join((str(i) for i in self))
+        return "\n".join((str(e) for e in self.get_entries(all=True)))
 
     def find_key(self, key):
         """Return a list object containing entries with matching key.
@@ -160,7 +175,6 @@ class ConfigFile(object):
         :key: (str) name of the search key
         :returns: (list)
         """
-
         return [e for e in self if e.get_key() == key]
 
     def find_value(self, value):
@@ -171,12 +185,16 @@ class ConfigFile(object):
         """
         return [e for e in self if e.get_value() == value]
 
-    def get_entries(self):
+    def get_entries(self, all=False):
         """Get the list of entries in the config file
 
+        :all: (bool) If true return all entries including empty lines and comments.
         :returns: (list)
         """
-        return self._entries
+        if all:
+            return self._entries
+        else:
+            return [e for e in self._entries if e.get_type() == "SETTING"]
 
     def get_mods(self):
         """Get the list of installed mods
@@ -198,7 +216,7 @@ class ConfigFile(object):
             raise ValueError("Entry: '%s' not in config file" % entry)
 
         entry.set_config(None)
-        self.get_entries().remove(entry)
+        self._entries.remove(entry)
 
     def insert(self, index, entry):
         if not isinstance(entry, ConfigEntry):
@@ -207,10 +225,10 @@ class ConfigFile(object):
             raise ValueError("Entry '%s' is already in openmw.cfg" % entry)
 
         entry.set_config(self)
-        return self.get_entries().insert(index, entry)
+        self._entries.insert(index, entry)
 
     def append(self, entry):
-        return self.insert(len(self.get_entries()), entry)
+        self.insert(len(self.get_entries(all=True)), entry)
 
     def add_entry(self, entry):
         """Add an entry to the config file, unlike append this method will insert
@@ -233,15 +251,8 @@ class ConfigFile(object):
     def _parse(self):
         """Read and parse openmw.cfg"""
 
-        # Entries are stored in a list containing dicts, this is because
-        # openmw.cfg has duplicate keys.
         with open(self.file, "r") as fh:
             for line in fh.readlines():
-                # Empty lines are ignored.
-                # This is the same behaviour as openmw-launcher
-                if line.isspace():
-                    continue
-
                 entry = ConfigEntry(line, config=self)
                 self.append(entry)
 
