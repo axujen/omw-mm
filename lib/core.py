@@ -45,6 +45,7 @@ def copy_to_mod_dir(dir, dest):
     return new_dir
 
 
+# TODO: Remove this in favor of install_mod method in ConfigFile
 def get_latest_key_index(key, cfg):
     """Get the index of the last :key: entry in openmw.cfg.
 
@@ -82,6 +83,7 @@ def get_full_path(path):
     return path
 
 
+# TODO: Remove this, in favor of install_mod method in ConfigFile
 def insert_data_entry(entry, cfg):
     """Insert a data entry into openmw.cfg.
 
@@ -110,10 +112,11 @@ def rm_mod_dir(mod_dir):
     shutil.rmtree(mod_dir)
 
 
-def get_mod_entry(mod, cfg):
+# TODO: This shouldn't be necessary. ConfigFile should store mods (along with their entries)
+def get_mod_entry(mod_path, cfg):
     """Try to find a mods config entry in openmw.cfg
 
-    :mod: (OmwMod) Mod object.
+    :mod_path: (str) Path to the installed mod.
     :cfg: (ConfigFile) openmw.cfg object.
     :returns: (ConfigEntry or None) Config entry referencing the mod. Or None if no entry could be found
     """
@@ -122,17 +125,19 @@ def get_mod_entry(mod, cfg):
     entries = cfg.find_key("data")
 
     for entry in entries:
-        if mod.get_path() == entry.get_value():
+        if mod_path == entry.get_value():
             output = entry
 
     return output
 
 
+# TODO: Deal with plugins who's mods have been uninstalled.
 def get_plugins(cfg):
-    """Get all plugins for installed mods and the ones referenced in openmw.cfg
+    """Get all plugins enabled and disabled plugins.
+    Note: this wont return orphaned plugins since they can't have a plugin object.
 
-    :cfg: (ConfigFile) openmw.cfg object
-    :returns: (list) List of all plugins contained in these mods.
+    :cfg: (ConfigFile) openmw.cfg object.
+    :returns: (list) list of all plugin objects referenced in openmw.cfg.
     """
     mods = [OmwMod(e.get_value(), e) for e in cfg.find_key("data")]
     plugins = []
@@ -143,12 +148,6 @@ def get_plugins(cfg):
         for plugin in mod.get_plugins():
             plugins.append(plugin)
 
-    # Merge with enabled plugins, since a plugin could be not installed but still
-    # has a reference in openmw.cfg
-    enabled_plugins = get_enabled_plugins(cfg)
-    if enabled_plugins:
-        plugins += [p for p in enabled_plugins if p not in plugins]
-
     return plugins
 
 
@@ -156,62 +155,65 @@ def get_enabled_plugins(cfg):
     """Get a list of enabled plugins sorted by load order.
 
     :cfg: (ConfigFile) openmw.cfg object.
-    :returns: (list) List of enabled plugins sorted by load order.
+    :returns: (list) List of enabled plugin objects sorted by load order.
     """
-    entries = cfg.find_key("content")
-    return [e.get_value() for e in entries]
+    plugins = []
+    for plugin in get_plugins(cfg):
+        if plugin.is_enabled():
+            plugins.append(plugin)
+
+    return sorted(plugins, key=lambda plugin: plugin.get_order())
 
 
 def get_disabled_plugins(cfg):
     """Get a list of plugins that are installed but not enabled.
 
     :cfg: (ConfigFile) openmw.cfg object.
+    :returns: (list) List of disabled plugin objects
+    """
+    plugins = []
+    for plugin in get_plugins(cfg):
+        if not plugin.is_enabled():
+            plugins.append(plugin)
+
+    return plugins
+
+
+def get_orphaned_plugins(cfg):
+    """Get a list of plugins that have entries in openmw.cfg but have no parent mod.
+
+    :cfg: (ConfigFile) openmw.cfg object
     :returns: (list)
     """
-    enabled_plugins = get_enabled_plugins(cfg)
-    plugins = get_plugins(cfg)
-    disabled_plugins = []
+
+    installed_plugins = [p.get_name() for p in get_plugins(cfg)]
+    plugins = [e.get_value() for e in cfg.find_key("content")]
+    orphaned = []
 
     for plugin in plugins:
-        if plugin not in enabled_plugins:
-            disabled_plugins.append(plugin)
+        if plugin not in installed_plugins:
+            orphaned.append(plugin)
 
-    return disabled_plugins
+    return orphaned
 
 
-def enable_plugin(cfg, entry):
-    """Enable a plugin by creating a new entry for it in openmw.cfg
+# TODO: This function should be a ConfigFile method (Operation refactor ConfigFile?)
+def find_plugin(cfg, plugin_name):
+    """Find an installed plugin by name
 
-    :cfg: (ConfigFile) openmw.cfg object.
-    :entry: (ConfigEntry) config entry for the plugin.
-    :raises: (ValueError)
+    :plugin_name: (str) Plugin name
+    :returns: (OmwPlugin or None)
     """
-    plugin = entry.get_value()
-    if plugin not in get_plugins(cfg):
-        raise ValueError("No such plugin %s" % plugin)
+    mods = [OmwMod(e.get_value(), e) for e in cfg.find_key("data")]
+    for mod in mods:
+        plugins = mod.get_plugins()
+        if not plugins:
+            continue
+        for plugin in plugins:
+            if plugin.get_name() == plugin_name:
+                return plugin
 
-    if plugin in get_enabled_plugins(cfg):
-        raise ValueError("Plugin %s is already enabled" % plugin)
-
-    # Append the new entry behind the latest content entry to keep things clean.
-    index = get_latest_key_index("content", cfg)
-    cfg.insert(index + 1, entry)
-
-
-def disable_plugin(cfg, entry):
-    """Disable a plugin from openmw.cfg
-
-    :cfg:  (ConfigFile) openmw.cfg object.
-    :entry:  (ConfigEntry) Plugins config entry.
-    :raises: (ValueError)
-    """
-    plugin = entry.get_value()
-    if plugin not in get_plugins(cfg):
-        raise ValueError("No such plugin %s" % plugin)
-    if plugin in get_disabled_plugins(cfg):
-        raise ValueError("Plugin %s is already disabled" % plugin)
-
-    cfg.remove(entry)
+    return None
 
 
 def merge_levlists(plugins, output):

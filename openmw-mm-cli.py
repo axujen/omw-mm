@@ -39,28 +39,39 @@ def list_mods(omw_cfg, mods_dir=None, path=False):
 
 
 def clean_mods(omw_cfg):
-    """Remove data entries that reference non-existing directories from openmw.cfg
+    """Remove invalid data and content entries from openmw.cfg
 
     :omw_cfg: (str) Path to openmw.cfg.
-    :returns: (list) List of remove ConfigEntry objects.
     """
     omw_cfg = ConfigFile(core.get_full_path(omw_cfg))
 
-    bad_entries = []
+    # Remove invalid data entries
+    bad_mods = []
     for entry in omw_cfg.find_key("data"):
         if not os.path.exists(entry.get_value()):
-            print("Removing entry %s from openmw.cfg." % entry)
-            bad_entries.append(entry)
+            print("Removing data entry for %s" % entry.get_value())
+            bad_mods.append(entry)
             omw_cfg.remove(entry)
 
-    if bad_entries:
-        omw_cfg.write()
+    if not bad_mods:
+        print("No invalid data entries found!")
+
+    # Remove Invalid content entries (Perhaps this should have a user switch?)
+    bad_plugins = core.get_orphaned_plugins(omw_cfg)
+    if bad_plugins:
+        for plugin in bad_plugins:
+            entry = ConfigEntry("content", plugin)
+            print("Removing content entry for %s" % plugin)
+            omw_cfg.remove(entry)
     else:
-        print("No invalid entries found.")
+        print("No invalid content entries found!")
 
-    return bad_entries
+    if bad_mods or bad_plugins:
+        omw_cfg.write()
 
 
+# TODO: Autoclean and Autodelete options in the config.
+# Maybe not Autodelete?
 def uninstall_mod(omw_cfg, mod, clean=False, rm=False):
     """Uninstall a mod by removing its entry from openmw.cfg
 
@@ -82,24 +93,26 @@ def uninstall_mod(omw_cfg, mod, clean=False, rm=False):
         raise SystemExit(1)
 
     omw_cfg = ConfigFile(core.get_full_path(omw_cfg))
-    mod_obj = OmwMod(mod_path)
-    entry = core.get_mod_entry(mod_obj, omw_cfg)
+    entry = core.get_mod_entry(mod_path, omw_cfg)
 
     if not entry:
         print("Could not find a reference to %s in openmw.cfg" % mod)
         raise SystemExit(0)
 
+    mod_obj = OmwMod(mod_path, entry)
 
-    if clean and mod_obj.get_plugins():
-        for plugin in mod_obj.get_plugins():
-            if plugin in core.get_enabled_plugins(omw_cfg):
-                e = ConfigEntry("content", plugin, omw_cfg)
-                print("Disabling %s" % plugin)
-                core.disable_plugin(omw_cfg, e)
+    if clean:
+        plugins = mod_obj.get_plugins()
+        if plugins:
+            for plugin in plugins:
+                if plugin.is_enabled():
+                    print("Disabling %s" % plugin.get_name())
+                    plugin.disable()
 
     print("Removing entry %s from openmw.cfg" % entry)
     omw_cfg.remove(entry)
     omw_cfg.write()
+
     if rm:
         print("Deleting mod in %s" % entry.get_value())
         core.rm_mod_dir(entry.get_value())
@@ -149,90 +162,80 @@ def list_plugins(omw_cfg, tree=False):
     """
 
     omw_cfg = ConfigFile(core.get_full_path(omw_cfg))
-    mods = [OmwMod(e.get_value(), e) for e in omw_cfg.find_key("data")]
 
     if tree:
-        printed = []
+        mods = [OmwMod(e.get_value(), e) for e in omw_cfg.find_key("data")]
         for mod in mods:
             plugins = mod.get_plugins()
-            if not plugins:  # Skip pluginless mods
+            if not plugins:  # Skip modless plugins
                 continue
-            else:
-                print("%s:" % mod.get_name())
-                for plugin in plugins:
-                    if mod.plugin_is_enabled(plugin):
-                        prefix = "+"
-                    else:
-                        prefix = "-"
 
-                    printed.append(plugin)
-                    print("\t%s %s" % (prefix, plugin))
-        # Print modless plugins
-        modless = True
-        for plugin in core.get_enabled_plugins(omw_cfg):
-            if plugin not in printed:
-                if modless:
-                    print("Orphaned Plugins (They don't belong to any mod listed in openmw.cfg):")
-                    modless = False
-                print("\t+ %s" % plugin)
+            print("%s:" % mod.get_name())
+            disabled_plugins = []  # Save disabled plugins for last
+            for plugin in plugins:
+                if plugin.is_enabled():
+                    print("\t(%d) %s" % (plugin.get_order(), plugin.get_name()))
+                else:
+                    disabled_plugins.append(plugin)
+            if disabled_plugins:
+                for plugin in disabled_plugins:
+                    print("\t- %s" % plugin.get_name())
     else:
-        enabled_plugins = core.get_enabled_plugins(omw_cfg)
-        disabled_plugins = core.get_disabled_plugins(omw_cfg)
+        for plugin in core.get_enabled_plugins(omw_cfg):
+            print("(%d) %s" % (plugin.get_order(), plugin.get_name()))
+        for plugin in core.get_disabled_plugins(omw_cfg):
+            print("- " + plugin.get_name())
 
-        if enabled_plugins:
-            i = 1
-            for plugin in enabled_plugins:
-                print("(%d) %s" % (i, plugin))
-                i += 1
-        if disabled_plugins:
-            for plugin in disabled_plugins:
-                print("- %s" % plugin)
+    # Print orphaned plugins
+    orphaned = core.get_orphaned_plugins(omw_cfg)
+    if orphaned:
+        print("\nThe following plugins don't belong to any currently installed mod. Use the clean command to remove them.")
+        for plugin in orphaned:
+            print(plugin)
 
 
-def enable_plugin(omw_cfg, plugin):
+def enable_plugin(omw_cfg, plugin_name):
     """Enable a plugin by name.
 
-    :omw_cfg: (ConfigFile) openmw.cfg object.
-    :plugin: (str) Full plugin name.
+    :omw_cfg: (ConfigFile) openmw.cfg object
+    :plugin_name: (str) Plugin name
     """
 
     omw_cfg = ConfigFile(core.get_full_path(omw_cfg))
-
-    if plugin in core.get_enabled_plugins(omw_cfg):
-        print("Plugin %s is already enabled!" % plugin)
+    plugin = core.find_plugin(omw_cfg, plugin_name)
+    if not plugin:
+        print("Could not find plugin %s." % plugin_name)
         raise SystemExit(1)
 
-    if plugin not in core.get_disabled_plugins(omw_cfg):
-        print("Could not find plugin %s in any of the currently installed mods" % plugin)
+    if plugin.is_enabled():
+        print("Plugin %s is already enabled." % plugin_name)
         raise SystemExit(1)
 
-    entry = ConfigEntry("content", plugin, omw_cfg)
-
-    print("Enabling %s" % plugin)
-    core.enable_plugin(omw_cfg, entry)
+    print("Enabling %s." % plugin_name)
+    plugin.enable()
     omw_cfg.write()
 
 
-def disable_plugin(omw_cfg, plugin):
+# TODO: Improve this function to be able to handle disabling plugins by index
+def disable_plugin(omw_cfg, plugin_name):
     """Disable a currently installed plugin by name.
 
     :omw_cfg: (ConfigFile) openwm.cfg object.
-    :plugin: (str) Name of the plugin to be disabled.
+    :plugin_name: (str) Name of the plugin to be disabled.
     """
 
     omw_cfg = ConfigFile(core.get_full_path(omw_cfg))
+    plugin = core.find_plugin(omw_cfg, plugin_name)
 
-    if plugin not in core.get_plugins(omw_cfg):
-        print("There is no such plugin %s" % plugin)
-        raise SystemExit(0)
-    if plugin in core.get_disabled_plugins(omw_cfg):
-        print("Plugin %s is already disabled" % plugin)
-        raise SystemExit(0)
+    if not plugin:
+        print("Could not find plugin %s." % plugin_name)
+        raise SystemExit(1)
 
-    print("Disabling %s" % plugin)
-    entry = ConfigEntry("content", plugin, omw_cfg)
-    core.disable_plugin(omw_cfg, entry)
+    if not plugin.is_enabled():
+        print("Plugin %s is already enabled." % plugin_name)
 
+    print("Disabling %s" % plugin_name)
+    plugin.disable()
     omw_cfg.write()
 
 

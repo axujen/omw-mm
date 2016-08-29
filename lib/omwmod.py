@@ -123,7 +123,7 @@ class OmwMod(object):
 
             for ext in plugin_extensions:
                 if file.lower().endswith(ext):
-                    plugins.append(file)
+                    plugins.append(OmwPlugin(self, file))
 
         return plugins
 
@@ -159,61 +159,122 @@ class OmwMod(object):
         # This shouldn't happen
         raise ValueError("Could not find an entry for %s in %s" % (self.get_name(), cfg.file))
 
-    def plugin_is_enabled(self, plugin):
-        """Check if this mods plugin is enabled.
 
-        :plugin: (str) Full name of the plugin.
-        :returns: (bool)
-        :raises: (ValueError)
+# OmwPlugin is for plugins.
+class OmwPlugin(object):
+    def __init__(self, mod, name):
+        """Class that describes the properties of an openmw plugin
+
+        :mod: (OmwMod) Parent mod
+        :name: (str) Name of the plugin with the extension
         """
+        if not isinstance(mod, OmwMod):
+            raise ValueError("Expecting OmwMod, got %s" % mod)
+
+        plugin_extensions = [".esm", ".esp", ".omwaddon"]
+        for ext in plugin_extensions:
+            if name.lower().endswith(ext):
+                break
+        else:  # Confused? see http://python-notes.curiousefficiency.org/en/latest/python_concepts/break_else.html
+            raise ValueError("Plugin name must end with a known plugin extension, got %s" % name)
+
+        self._mod = mod
+        self._name = name
+
+    def get_name(self):
+        return self._name
+
+    def get_path(self):
+        return os.path.join(self.get_mod().get_path(), self.get_name())
+
+    def get_mod(self):
+        return self._mod
+
+    def get_config(self):
         if not self.is_installed():
-            raise ValueError("Mod %s is not installed" % self.get_name())
+            raise ValueError("Plugin %s is not installed" % self.get_name())
 
-        if plugin not in self.get_plugins():
-            raise ValueError("Mod %s does not have a plugin named %s" % (self.get_name(), plugin))
+        return self.get_mod().get_config()
 
-        entries = self.get_config().find_key("content")
-        for entry in entries:
-            if entry.get_value() == plugin:
+    def get_entry(self):
+        if not self.is_enabled():
+            raise ValueError("Plugin %s is not enabled, cannot retrieve entry" % self.get_name())
+
+        cfg = self.get_config()
+        for entry in cfg.find_key("content"):
+            if self.get_name() == entry.get_value():
+                return entry
+
+    def is_installed(self):
+        """Check if the plugin is installed.
+        A plugin is considered installed if its parent mod is installed
+
+        :returns: (bool)
+        """
+
+        return self.get_mod().is_installed()
+
+    def is_enabled(self):
+        """Check if the plugin is installed an enabled.
+
+        :returns: (bool)
+        """
+        if self.is_installed():
+            cfg = self.get_config()
+        else:  # Mod not installed, then plugin not installed.
+            # TODO: This will return a negative when the mod is not installed
+            # But the content entry for the plugin is still there.
+            return False
+
+        # dont call self.get_entry() here, it calls this method
+        for entry in cfg.find_key("content"):
+            if entry.get_value() == self.get_name():
                 return True
 
         return False
 
-    def enable_plugin(self, plugin):
-        """Enable a plugin for this mod.
+    def get_order(self):
+        """Find the plugins load order
 
-        :plugin: (str) Full name of the plugin.
-        :raises: (ValueError)
+        :returns: (int)
         """
+        if not self.is_enabled():
+            raise ValueError("Plugin %s is not enabled, does not have a load order" % self.get_name())
 
+        cfg = self.get_config()
+        index = 1
+        for entry in cfg.find_key("content"):
+            if self.get_name() == entry.get_value():
+                return index
+            else:
+                index += 1
+
+        # This shouldn't happen
+        raise ValueError("Could not find an entry for %s in %s" % (self.get_name(), cfg.file))
+
+    def enable(self):
+        """Enable the plugin in openmw.cfg"""
         if not self.is_installed():
-            raise ValueError("Cannot enable a plugin, mod %s is not installed" % self.get_name())
+            raise ValueError("Cannot enable plugin %s, its not installed" % self.get_name())
 
-        if plugin not in self.get_plugins():
-            raise ValueError("Mod %s does not have a plugin named %s" % (self.get_name(), plugin))
+        if self.is_enabled():
+            raise ValueError("Plugin %s is already enabled" % self.get_name())
 
-        omw_cfg = self.get_config()
-        entry = ConfigEntry("content", plugin)
-        omw_cfg.append(entry)
+        cfg = self.get_config()
+        entry = ConfigEntry("content", self.get_name())
+        cfg.append(entry)
 
-    def disable_plugin(self, plugin):
-        """Disable this mods plugin.
+    def disable(self):
+        """Disable the plugin by removing its content entry from openmw.cfg"""
 
-        :plugin: (str) Full name of the plugin.
-        :raises: (ValueError)
-        """
-        if not self.is_installed():
-            raise ValueError("Cannot disable a plugin, mod %s is not installed" % self.get_name())
+        if not self.is_enabled():
+            raise ValueError("Plugin %s is already disabled" % self.get_name())
 
-        if plugin not in self.get_plugins():
-            raise ValueError("Mod %s does not have a plugin named %s" % (self.get_name(), plugin))
+        cfg = self.get_config()
+        for entry in cfg.find_key("content"):
+            if entry.get_value() == self.get_name():
+                cfg.remove(entry)
+                return
 
-        if not self.plugin_is_enabled(plugin):
-            raise ValueError("Plugin %s is already disabled" % plugin)
-
-        omw_cfg = self.get_config()
-        entries = omw_cfg.find_key("content")
-
-        for entry in entries:
-            if entry.value() == plugin:
-                omw_cfg.remove(entry)
+        # Shouldn't happen
+        raise ValueError("Plugin %s does not have a entry in %s" % (self.get_name(), cfg.file))
