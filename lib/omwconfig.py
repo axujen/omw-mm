@@ -133,56 +133,24 @@ class ConfigFile(object):
     :file: (str): Path to openmw.cfg, Default: None
     """
 
-    # TODO: Update this class to take file handles instead of filenames
     def __init__(self, file=None):
         self.__entries = []
         if file:
             self.file = file
-            self.parse()
+            self._parse()
 
-    def __len__(self):
-        return self.__entries.__len__()
+    def __contains__(self, entry):
+        if not isinstance(entry, ConfigEntry):
+            raise ValueError("ConfigFile can only contain ConfigEntry objects, got %s" % entry.__class__.__name__)
+        return self.__entries.__contains__(entry)
 
-    def __str__(self):
+    def __iter__(self, *args, **kwargs):
+        return self.__entries.__iter__(*args, **kwargs)
+
+    def tostring(self):
         """Convert entries into a string ready to save on disk."""
 
         return "\n".join((str(i) for i in self))
-    __repr__ = __str__
-
-    def __getitem__(self, index):
-        if isinstance(index, slice):
-            output = ConfigFile()
-            if index.stop:
-                stop = index.stop
-            else:
-                stop = len(self)
-
-            if index.start:
-                start = index.start
-            else:
-                start = 0
-
-            for i in range(start, stop):
-                output.append(self.__entries[i])
-            return output
-
-        return self.__entries.__getitem__(index)
-
-    def __setitem__(self, index, object):
-        return self.__entries.__setitem__(index, object)
-
-    def __delitem__(self, index, object=None):
-        return self.__entries.__delitem__(index, object)
-
-    def __contains__(self, entry):
-        return self.__entries.__contains__(entry)
-
-    def __iter__(self):
-        return self.__entries.__iter__()
-
-    def __get_lines(self):
-        """Read the config file and return a list of lines (str)."""
-        return open(self.file, "r").readlines()
 
     def find_key(self, key):
         """Return a ConfigFile object containing entries with matching key.
@@ -238,29 +206,30 @@ class ConfigFile(object):
         return self.__entries.insert(index, entry)
 
     def append(self, entry):
-        return self.insert(len(self), entry)
+        return self.insert(len(self.__entries), entry)
 
-    def parse(self):
-        """Read the config file and return a list of dicts for each entry."""
+    def _parse(self):
+        """Read and parse openmw.cfg"""
 
         # Entries are stored in a list containing dicts, this is because
         # openmw.cfg has duplicate keys.
-        for line in self.__get_lines():
-            # Empty lines are ignored.
-            # This is the same behaviour as openmw-launcher
-            if line.isspace():
-                continue
+        with open(self.file, "r") as fh:
+            for line in fh.readlines():
+                # Empty lines are ignored.
+                # This is the same behaviour as openmw-launcher
+                if line.isspace():
+                    continue
 
-            self.append(ConfigEntry(line, config=self))
+                self.append(ConfigEntry(line, config=self))
 
     def write(self, path=None):
         """Save the config file to a location on disk.
 
-        Args:
-            path (str): path to save. Default: self.file
+        :path: (str) Path to save to. Default: original path
         """
 
         if not path:
             path = self.file
 
-        open(path, "w").write(str(self))
+        with open(path, "w") as fh:
+            fh.write(self.tostring())
