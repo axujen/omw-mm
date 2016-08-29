@@ -155,33 +155,21 @@ class ConfigFile(object):
         return "\n".join((str(i) for i in self))
 
     def find_key(self, key):
-        """Return a ConfigFile object containing entries with matching key.
+        """Return a list object containing entries with matching key.
 
         :key: (str) name of the search key
-        :returns: (ConfigFile)
+        :returns: (list)
         """
 
-        output = ConfigFile()
-        for entry in self:
-            if entry.get_key() == key:
-                entry.set_config(self)
-                output.__entries.append(entry)
-
-        return output or None
+        return [e for e in self if e.get_key() == key]
 
     def find_value(self, value):
-        """Return a ConfigFile object containing entries with matching value
+        """Return a list object containing entries with matching value
 
         :value: (str) name of the search value
-        :returns: (ConfigFile)
+        :returns: (list)
         """
-        output = ConfigFile()
-        for entry in self:
-            if entry.get_value(raw=True) == value:
-                entry.set_config(self)
-                output.__entries.append(entry)
-
-        return output or None
+        return [e for e in self if e.get_value() == value]
 
     def get_mods(self):
         """Get the list of installed mods
