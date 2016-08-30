@@ -2,7 +2,6 @@
 import os
 import sys
 import shutil
-from esm import Esm
 
 
 def is_mod_dir(dir):
@@ -160,30 +159,6 @@ def find_plugin(cfg, plugin_name):
                 return plugin
 
     return None
-
-
-def merge_levlists(plugins, output):
-    """Merge a leveled lists for a list of plugins
-
-    :cfg: (ConfigFile) openmw.cfg object
-    :plugins: (list) List of Esm objects
-    :output: (str) Path to output file
-    """
-
-    levc = []  # Creature lists
-    levi = []  # Item lists
-
-    # Merge all records
-    for esm in plugins:
-        esm.read()
-        levc += esm.find_records("LEVC")
-        levi += esm.find_records("LEVL")
-
-    # And dump into a file
-    mash = Esm(os.path.join(get_base_dir, "./empty.esp"))
-    mash.read()
-    mash.records += levi + levc
-    mash.write(output)
 
 
 def get_base_dir():

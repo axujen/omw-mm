@@ -1,6 +1,7 @@
 #!/usr/bin/env python2.7
 import os
 from argparse import ArgumentParser
+from tempfile import NamedTemporaryFile
 from lib.omwconfig import ConfigFile, ConfigEntry
 from lib.esm import Esm
 from lib.config import config
@@ -235,27 +236,49 @@ def disable_plugin(omw_cfg, plugin_name):
 def merge_lists(omw_cfg, out=None):
     """Merge leveled lists for every enabled plugin.
 
-    :omw_cfw: (str) Path to openmw.cfg
+    :omw_cfg: (str) Path to openmw.cfg
     :out: (str) Path to output file. Default: ./merged.esp
     """
 
-    if not out:
-        out = "./merged.esp"
-
     cfg = ConfigFile(omw_cfg)
     mods = cfg.get_mods()
-    plugins_esm = []
+    if not mods:
+        print("Nothing to merge!")
+        raise SystemExit(1)
+
     blacklist = config.get("General", "never_merge").split(",")
-    print(blacklist)
+    merged = Esm(os.path.join(core.get_base_dir(), "./empty.esp"))
+    merged.parse_records()
+
     for mod in mods:
         plugins = mod.get_plugins()
         if plugins:
             for plugin in plugins:
-                if plugin not in blacklist and mod.plugin_is_enabled(plugin):
-                    print("Merging: %s" % plugin)
-                    plugins_esm.append(Esm(os.path.join(mod.get_path(), plugin)))
+                if plugin.get_name() not in blacklist and plugin.is_enabled():
+                    print("Merging: %s" % plugin.get_name())
+                    to_merge = Esm(plugin.get_path())
+                    to_merge.parse_records()
+                    diff, ndiff = merged.merge_with(to_merge)
+                    if ndiff:
+                        for rec in diff.keys():
+                            if rec == 'LEVC':
+                                lname = "Leveled Creatures"
+                            else:
+                                lname = "Leveled Items"
+                            printed = False
+                            for status in diff[rec].keys():
+                                if not diff[rec][status]:
+                                    continue
+                                if not printed:
+                                    print("\t ==== %s ====" % lname)
+                                    printed = True
+                                print("\t ==== %s ====" % status)
+                                for name in sorted(diff[rec][status].keys()):
+                                    print("\t\t%s" % name.rstrip("\x00"))
+    if not out:
+        out = "./Merged_Lists.esp"
 
-    core.merge_levlists(plugins_esm, out)
+    merged.write(out)
 
 
 def create_arg_parser(*args, **kwargs):

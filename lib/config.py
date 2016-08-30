@@ -26,7 +26,7 @@ def set_defaults(config):
     config.add_section("General")
     config.set("General", "openmw_cfg", core.get_full_path(openmw_cfg))
     config.set("General", "mods_dir", core.get_full_path(mods_dir))
-    config.set("General", "never_merge", "Morrowind.esm,Tribunal.esm,Bloodmoon.esm,merged.esp")
+    config.set("General", "never_merge", "Morrowind.esm,Tribunal.esm,Bloodmoon.esm,Merged_Lists.esp")
 
     return config
 
