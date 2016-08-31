@@ -1,7 +1,6 @@
 #!/usr/bin/env python2.7
 import os
 from argparse import ArgumentParser
-from tempfile import NamedTemporaryFile
 from lib.omwconfig import ConfigFile, ConfigEntry
 from lib.esm import Esm
 from lib.config import config
