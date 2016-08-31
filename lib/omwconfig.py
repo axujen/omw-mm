@@ -1,5 +1,5 @@
 # ConfigEntry and ConfigFile are classes that describe the openmw.cfg file.
-# TODO: Refactor these classes, they are an ugly mess.
+# TODO: Make ConfigEntry a subclass of ConfigRawEntry
 import omwmod
 
 
@@ -46,7 +46,9 @@ class ConfigEntry(object):
         """
         key, value = (i.strip() for i in line.split("="))
         if "#" in value:
-            value, comment = (i.strip() for i in value.split("#"))
+            value, comment = value.split("#")
+            value = value.strip()
+            comment = "#" + comment
         else:
             comment = None
 
@@ -110,16 +112,23 @@ class ConfigEntry(object):
 
 class ConfigRawEntry(object):
     """Raw openmw.cfg entry, used for storing comments and blank lines"""
-    def __init__(self, line, etype):
+    def __init__(self, line, etype, config):
         """"
         :line: (str) Raw line from openmw.cfg
         :etype: (str) Type of the link (COMMENT or BLANK)
         """
         self.line = line.rstrip("\n")  # Remove newlines
         self.etype = etype
+        self.config = config
 
     def __str__(self):
         return self.line
+
+    def set_config(self, config):
+        self.config = config
+
+    def get_config(self):
+        return self.config
 
 
 class ConfigFile(object):
@@ -222,9 +231,9 @@ class ConfigFile(object):
         with open(self._path, "r") as fh:
             for line in fh.readlines():
                 if line.isspace():  # Blank line.
-                    entry = ConfigRawEntry(line, "BLANK")
+                    entry = ConfigRawEntry(line, "BLANK", config=self)
                 elif line.strip().startswith("#"):  # Comment
-                    entry = ConfigRawEntry(line, "COMMENT")
+                    entry = ConfigRawEntry(line, "COMMENT", config=self)
                 else:  # Normal entry
                     entry = ConfigEntry(line, config=self)
                 self._entries.append(entry)
