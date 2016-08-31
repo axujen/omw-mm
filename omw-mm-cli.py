@@ -343,12 +343,12 @@ def create_arg_parser(*args, **kwargs):
     # Merge command
     subparser_m = subparser.add_parser("merge", help="Merge all leveled lists into one file")
     subparser_m.add_argument("-o", "--output", metavar="output", default=None, dest="out",
-            help="Destination of the merged esp. Default: ./merged.esp")
+            help="Destination of the merged esp. Default: ./Merged_Lists.esp")
 
     return parser
 
 if __name__ == "__main__":
-    args = create_arg_parser(prog="openmw-mm-cli").parse_args()
+    args = create_arg_parser(prog="omw-mm-cli").parse_args()
 
     if args.command == "list":
         list_mods(args.cfg, args.dir, args.path)
