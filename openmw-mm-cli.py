@@ -246,8 +246,8 @@ def merge_lists(omw_cfg, out=None):
         raise SystemExit(1)
 
     blacklist = config.get("General", "never_merge").split(",")
-    merged = Esm(os.path.join(core.get_base_dir(), "./empty.esp"))
-    merged.parse_records()
+    merged = Esm(os.path.join(core.get_base_dir(), "./Merged.esp"))
+    merged.unpack()
 
     for mod in mods:
         plugins = mod.get_plugins()
@@ -256,8 +256,10 @@ def merge_lists(omw_cfg, out=None):
                 if plugin.get_name() not in blacklist and plugin.is_enabled():
                     print("Merging: %s" % plugin.get_name())
                     to_merge = Esm(plugin.get_path())
-                    to_merge.parse_records()
+                    to_merge.unpack()
                     diff, ndiff = merged.merge_with(to_merge)
+
+                    # Pretty Print stuff
                     if ndiff:
                         for rec in diff.keys():
                             if rec == 'LEVC':
