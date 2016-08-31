@@ -1,4 +1,4 @@
-# This file contains default configuration options for openmw-mm
+# TODO: Rework this module, its kind of messy.
 from ConfigParser import SafeConfigParser
 import os.path
 import core
@@ -32,7 +32,7 @@ def set_defaults(config):
 
 
 def init(path):
-    """Create a default config file for openmw-mm"
+    """Create a default config file for omw-mm"
 
     :path: (str) Path to the new config file.
     :returns: (SafeConfigParser) Newly created config object.
@@ -54,7 +54,7 @@ def get_config_path():
 
     :returns: (str) Absolute path to the config file.
     """
-    paths = [os.path.join(core.get_base_dir(), "./openmw-mm.cfg")]
+    paths = [os.path.join(core.get_base_dir(), "./omw-mm.cfg")]
     for path in paths:
         path = core.get_full_path(path)
         if os.path.exists(path):
