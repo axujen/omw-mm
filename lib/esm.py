@@ -1,4 +1,5 @@
 # Contains the Esm class that describes morrowinds esm/esp files.
+import os.path
 from StringIO import StringIO
 from struct import unpack, pack
 
@@ -11,6 +12,7 @@ class Esm(object):
         """
         self._path = path
         self._records = []
+        self.header = self.unpack_file_header()
 
     def find_records(self, id):
         """Search for a record by id.
@@ -25,20 +27,23 @@ class Esm(object):
 
         return records
 
-    def parse_records(self):
-        """Parse the file into a list of records, containing a sublist of subrecords.
+    def get_records(self):
+        return self._records
 
-        :data: (str) The plugins data.
-        """
-        with open(self._path, "r") as fh:
+    def unpack(self):
+        """Unpack the file's records"""
+        with open(self._path, "rb") as fh:
             EOF = len(fh.read())
             fh.seek(0)
             records = []
             while not fh.tell() == EOF:  # Because python doesn't support EOF
                 # Record
                 header = fh.read(16)
-                id, size, delflag, recflag = self.unpack_record_header(header)
+                id, size, delflag, recflag = unpack("4s3i", header)
                 data = fh.read(size)
+                if id == "TES3":  # Seperate the file header
+                    self.header = EsmTES3Record(id, size, delflag, recflag, data)
+                    continue
                 if id in ("LEVC", "LEVI"):
                     record = EsmLEVRecord(id, size, delflag, recflag, data)
                 else:
@@ -47,33 +52,42 @@ class Esm(object):
 
         self._records = records
 
+    def unpack_file_header(self):
+        """Unpack the file header only.
+
+        :returns: (EsmTES3Record)
+        """
+        with open(self._path, "rb") as handle:
+            id, size, delflag, recflag = unpack("4s3i", handle.read(16))
+            assert id == "TES3"
+
+            data = handle.read(size)
+            return EsmTES3Record(id, size, delflag, recflag, data)
+
+    def pack(self):
+        """Pack the file contents into binary format.
+
+        :returns: (str)
+        """
+        out = ''
+        # Pack the header.
+        out += self.header.pack()
+        # Pack the records.
+        for record in self._records:
+            out += record.pack()
+
+        return out
+
     def write(self, path=None):
         """Write the contents of the Esm to a file.
 
-        :path: (str) Path to the file. Default: self.path
+        :path: (str) Path to the file. Default: self._path
         """
         if not path:
-            path = self.path
+            path = self._path
 
         with open(path, "wb") as handle:
-            for record in self.get_records():
-                handle.write(record.pack())
-
-    def unpack_record_header(self, header):
-        """Unpack the header of a record
-
-        :header: (str) Must be exactly 16 bytes
-        :returns: (set) id, size, delflag?, recflag?
-        """
-        if not isinstance(header, str):
-            raise ValueError("unpack_header expects a string argument" % header)
-        if not len(header) == 16:
-            raise ValueError("Header must be 16 bytes long exactly, got %s" % header)
-
-        return unpack("4s3i", header)
-
-    def get_records(self):
-        return self._records
+            handle.write(self.pack())
 
     def merge_with(self, other):
         """Merge leveled lists from another esm with this one.
@@ -110,9 +124,16 @@ class Esm(object):
 
             num_diff += len(diff[rec]["Merged"]) + len(diff[rec]["Added"])
 
+        # Update the header with a new master if we merged any changes.
+        if num_diff:
+            self.header.add_master(other._path)
+            self.header.set_num_records(len(self.get_records()))
+
         return (diff, num_diff)
 
 
+# This class is intended as read-only, Create a subclass so you can tell it how to
+# repack its data by redefining the pack_data() method.
 class EsmRecord(object):
     """Describes a esm record"""
 
@@ -123,9 +144,8 @@ class EsmRecord(object):
         :size: (int) Size of the data of the record.
         :data: (str) Raw binary data of the record.
         """
-        self._id, self._size, self._data = id, size, data
+        self._id, self._size, self.__data = id, size, data
         self._delflag, self._recflag = delflag, recflag
-        self._subrecords = self.unpack_subrecords(data)
         self._changed = False
 
     def get_id(self):
@@ -139,42 +159,47 @@ class EsmRecord(object):
 
     def get_data(self):
         if self._changed:
-            self._data = self.pack_subrecords()
+            self.__data = self.pack_data()
             self._changed = False
 
-        return self._data
+        return self.__data
 
     def get_subrecords(self):
-        return self._subrecords
-
-    def unpack_subrecords(self, data):
         """Unpack the data of a record into subrecords.
 
-        :data: (str) Records data
         :returns: (list) List of subrecords
         """
         subrecords = []
+        data = self.get_data()
         stream = StringIO(data)
         EOF = len(data)
         while not stream.tell() == EOF:
             header = stream.read(8)
-            id, size = self.unpack_subrecord_header(header)
+            id, size = unpack("4si", header)
             data = stream.read(size)
             subrecords.append(EsmSubrecord(id, size, data))
         return subrecords
 
-    def unpack_subrecord_header(self, header):
-        """Unpack the header of a subrecord
+    def pack_subrecord(self, id, data, data_format=None):
+        """Calculate the size of a subrecord and pack into the specified format.
 
-        :header: (str) Must be exactly 8 bytes
-        :returns: (set) id, size
+        :id: (str) Subrecord's id.
+        :data: (str or tuple) Subrecords's data, can be a tuple of strings or a single string.
+        :data_format: (str) Data format, Default: len(data)s
+        :returns: (str) Packed subrecord.
         """
-        if not isinstance(header, str):
-            raise ValueError("unpack_header expects a string argument" % header)
-        if not len(header) == 8:
-            raise ValueError("Header must be 16 bytes long exactly, got %s" % header)
+        if not data_format:
+            data_format = "%ds" % len(data)
 
-        return unpack("4si", header)
+        if isinstance(data, tuple):
+            packed_data = pack(data_format, *data)
+        else:
+            packed_data = pack(data_format, data)
+
+        out = pack("4si", id, len(packed_data))
+        out += packed_data
+
+        return out
 
     def pack_header(self):
         """Convert the records header back into binary format.
@@ -183,33 +208,20 @@ class EsmRecord(object):
         """
         return pack("4s3i", self.get_id(), self.get_size(), self._delflag, self._recflag)
 
-    def pack_subrecords(self):
-        """Convert the records subrecords back into binary format.
-        The output should equivalent to self._data
-
-        :return: (str)
-        """
-        out = ''
-        for sub in self.get_subrecords():
-            out += sub.pack()
-
-        return out
-
-    # This class does not modify its records.
     def pack(self):
         """Convert the record back to binary format.
 
         :returns: (str)
         """
-        packed = ''
+        return self.pack_header() + self.get_data()
 
-        # Pack the header
-        packed += self.pack_header()
+    # This method only exists to be overriden by subclasses
+    def pack_data(self):
+        """Repack the records data.
 
-        # Pack data
-        packed += self.get_data()
-
-        return packed
+        :returns: (str) The records data, this is equivalent of self.__data
+        """
+        return self.__data
 
 
 class EsmSubrecord(object):
@@ -246,31 +258,22 @@ class EsmSubrecord(object):
 
         :returns: (str)
         """
-        packed = ''
-
-        # Write the header
-        packed += self.pack_header()
-
-        # Write the data
-        packed += self.get_data()
-
-        return packed
+        return self.pack_header() + self.get_data()
 
 
+# -- Specific Records.
 class EsmLEVRecord(EsmRecord):
     """Leveled Items/Creatures Record."""
 
     def __init__(self, *args, **kwargs):
         """See EsmRecord for arguments."""
         super(EsmLEVRecord, self).__init__(*args, **kwargs)
-        self.unpack_sub_data(self.get_subrecords())
+        self.unpack_data()
 
-    def unpack_sub_data(self, subrecords):
-        """Unpack the subrecords into meaningfull values.
-
-        :subrecords: (list) List of subrecords to be unpacked.
-        """
+    def unpack_data(self):
+        """Unpack the data into meaningful values."""
         self._objects = []
+        subrecords = self.get_subrecords()
         for sub in subrecords:
             # List ID
             if sub.get_id() == "NAME":
@@ -315,6 +318,31 @@ class EsmLEVRecord(EsmRecord):
             else:
                 raise ValueError("Unknown subrecord %s" % sub.get_id())
 
+    def pack_data(self):
+        out = ''
+        out += self.pack_subrecord("NAME", self._name)
+        # List specific flags
+        if self.get_id() == "LEVC":
+            flag = 1 * self._calc_all_levels
+            otype = "CNAM"
+        else:
+            flag = 1 * self._calc_all_items + 2 * self._calc_all_levels
+            otype = "INAM"
+        out += self.pack_subrecord("DATA", flag, "i")
+
+        # Chance None
+        out += self.pack_subrecord("NNAM", self._chance_none, "B")
+
+        # Count
+        out += self.pack_subrecord("INDX", self._count, "i")
+
+        # Objects
+        for lvl, obj in self._objects:
+            out += self.pack_subrecord(otype, obj)
+            out += self.pack_subrecord("INTV", lvl, "h")
+
+        return out
+
     def merge_with(self, other):
         """Merge this leveled list with another list.
 
@@ -345,36 +373,89 @@ class EsmLEVRecord(EsmRecord):
         # Flag as modified
         self._changed = True
 
-    def pack_sub(self, id, data, data_format=None):
-        if not data_format:
-            data_format = "%ds" % len(data)
 
-        packed_data = pack(data_format, data)
-        out = pack("4si", id, len(packed_data))
-        out += packed_data
-        return out
+class EsmTES3Record(EsmRecord):
+    """Header record, contains auth and description of the plugin along with its dependencies"""
+    def __init__(self, *args, **kwargs):
+        """See EsmRecord for arguments."""
+        super(EsmTES3Record, self).__init__(*args, **kwargs)
+        self.unpack_data()
 
-    def pack_subrecords(self):
+    def unpack_data(self):
+        """Unpack the record."""
+        mname = []
+        msize = []
+        for sub in self.get_subrecords():
+            if sub.get_id() == "HEDR":
+                ver, ftype, auth, desc, num_records = unpack("fi32s256si", sub.get_data())
+            if sub.get_id() == "MAST":
+                mname.append(sub.get_data().rstrip("\x00"))
+            if sub.get_id() == "DATA":
+                msize.append(unpack("l", sub.get_data())[0])
+
+        self._ver = ver
+        self._ftype = ftype
+        self._auth = auth.rstrip("\x00")
+        self._desc = desc.rstrip("\x00")
+        self._num_records = num_records
+        self._masters = zip(mname, msize)
+
+    def pack_data(self):
         out = ''
-        out += self.pack_sub("NAME", self._name)
-        # List specific flags
-        if self.get_id() == "LEVC":
-            flag = 1 * self._calc_all_levels
-            otype = "CNAM"
-        else:
-            flag = 1 * self._calc_all_items + 2 * self._calc_all_levels
-            otype = "INAM"
-        out += self.pack_sub("DATA", flag, "i")
+        # Pack HEDR subrecord
+        data = (self._ver, self._ftype, self._auth, self._desc, self._num_records)
+        out += self.pack_subrecord("HEDR", data, "fi32s256si")
 
-        # Chance None
-        out += self.pack_sub("NNAM", self._chance_none, "B")
-
-        # Count
-        out += self.pack_sub("INDX", self._count, "i")
-
-        # Objects
-        for lvl, obj in self._objects:
-            out += self.pack_sub(otype, obj)
-            out += self.pack_sub("INTV", lvl, "h")
+        # Pack the masters list
+        for master, size in self._masters:
+            out += self.pack_subrecord("MAST", master, "%ds" % (len(master) + 1))
+            out += self.pack_subrecord("DATA", size, "l")
 
         return out
+
+    def get_author(self):
+        return self._auth
+
+    def get_desc(self):
+        return self._desc
+
+    def get_version(self):
+        return self._ver
+
+    def get_record_count(self):
+        return self._num_records
+
+    def get_masters(self):
+        return self._masters
+
+    def set_author(self, auth):
+        if len(auth) > 32:
+            raise ValueError("Author cannot be longer than 32 characters, got %s" % auth)
+        self._auth = auth
+
+        self._changed = True
+
+    def set_desc(self, desc):
+        if len(desc) > 256:
+            raise ValueError("Description cannot be longer  than 256 characters, got %s" % desc)
+        self._desc = desc
+        self._changed = True
+
+    def set_num_records(self, num):
+        self._num_records = num
+        self._changed = True
+
+    def add_master(self, path):
+        """Add a master to the dependencies list.
+
+        :path: (str) Path to the master file.
+        """
+        if self._ftype != 0:
+            raise ValueError("Only esp plugins can have masters")
+
+        name = os.path.basename(path)
+        size = os.path.getsize(path)
+
+        self._masters.append((name, size))
+
+        self._changed = True
