@@ -40,7 +40,7 @@ Commands:
 Run omw-mm-cli.py command --help for additional help about each command.
 
 # NOTE
-The merge command is still new an experimental, i tries to emulate Wrye Mash and TESTool merged lists feature (without the need for resquencing) but it may not be 100% accurate.
+The merge command is still new and experimental, it tries to emulate Wrye Mash and TESTool merged lists feature (without the need for resequencing) but it may not be 100% accurate.
 
 If you have any info on how to improve it, please email me or open an issue in the github tracker
 
