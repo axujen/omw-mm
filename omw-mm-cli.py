@@ -225,7 +225,8 @@ def disable_plugin(omw_cfg, plugin_name):
         raise SystemExit(1)
 
     if not plugin.is_enabled():
-        print("Plugin %s is already enabled." % plugin_name)
+        print("Plugin %s is already disabled." % plugin_name)
+        raise SystemExit(1)
 
     print("Disabling %s" % plugin_name)
     plugin.disable()
