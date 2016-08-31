@@ -11,7 +11,7 @@ This script can handle the following operations:
   - Clean openmw.cfg from references to unavailable directories and plugins, so you can manually delete mods and have the script clean up openmw.cfg for you
   - *NEW* Merge Leveled Lists (See a note below)
 
-The project also aims to provide cross-platform support for windows (and hopefully mac) as well as the ability to sort mods with mlox and create merged leveled lists.
+The project also aims to provide cross-platform support for windows (and hopefully osx) as well as the ability to sort mods with mlox.
 
 A GUI is also planned but don't ask me when, i don't even know where to begin with that.
 # USAGE
