@@ -111,34 +111,29 @@ def uninstall_mod(omw_cfg, mod_name, clean=False, rm=False):
         core.rm_mod_dir(mod.get_path())
 
 
+# TODO: Better handling of already installed mods
 def install_mod(omw_cfg, src, dest, force=False):
-    """Install a mod directory and add appropriate openmw.cfg entry.
+    """Install a mod and add appropriate openmw.cfg entry.
 
     :omw_cfg: (str) Path to openmw.cfg.
-    :src: (str) Path to mod directory.
+    :src: (str) Path to mod.
     :dest: (str) Path to destination mod directory.
-    :force: (bool) Force install of mod dir. Default: False.
+    :force: (bool) Force installation. Default: False.
     """
     omw_cfg = ConfigFile(core.get_full_path(omw_cfg))
-    src_dir = core.get_full_path(src)
-    dest_dir = core.get_full_path(dest)
+    src = core.get_full_path(src)
+    dest = core.get_full_path(dest)
+    mod_source = core.get_modsource(src)
+    name = mod_source.name
 
-    if not os.path.isdir(src_dir):
-        print('%s is not a directory.' % src)
-        raise SystemExit(1)
-
-    if not core.is_mod_dir(src_dir) and not force:
-        print("%s is not detected as a mod directory, if you wish to install it anyway use the --force flag" % src)
-        raise SystemExit(1)
-
-    if os.path.exists(os.path.join(dest_dir, os.path.basename(src))):
-        print("A file %s already exists in %s. Try renaming the mod or supplying a different destination."
-              % (os.path.basename(src), dest_dir))
+    if not mod_source.is_mod() and not force:
+        print("%s is not detected as a mod,\
+              if you wish to install it anyway use the --force flag" % name)
         raise SystemExit(1)
 
     # Copy the mod
-    print("Copying %s to %s" % (src_dir, dest_dir))
-    new_dir = core.copy_to_mod_dir(src_dir, dest_dir)
+    new_dir = mod_source.install(dest)
+    print("Copied %s to %s" % (name, new_dir))
 
     # Add an entry
     entry = ConfigEntry("data", new_dir)

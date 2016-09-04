@@ -2,45 +2,21 @@
 import os
 import sys
 import shutil
+from lib.modsource import ModSourceDir, ModSourceArchive
 
 
-def is_mod_dir(dir):
-    """Check if given directory is an openmw mod directory.
+def get_modsource(path):
+    """This will return a proper ModSource subclass for a given source.
+    If path is a directory it returns ModSourceDir() class otherwise it returns
+    ModSourceArchive()
 
-    :dir: (str) Path to the mod directory.
-    :returns: (bool)
+    :path: (str) Absolute path to the soruce.
+    :returns: (ModSource subclass)
     """
-
-    # Checking for file/directory names is kind of bad but i cant figure out
-    # another method.
-    plugin_extensions = [".esp", ".esm", "omwaddon"]
-    resource_directories = ["Textures", "Meshes", "Icons", "Fonts", "Sound",
-                            "BookArt", "Splash", "Video"]
-    for file in os.listdir(dir):
-        # Check for morrowind resource folders
-        if os.path.isdir(os.path.join(dir, file)):
-            for resource_dir in resource_directories:
-                if file.lower() == resource_dir.lower():
-                    return True
-        else:  # Check for morrowind plugin files ( .esm .esp etc)
-            for ext in plugin_extensions:
-                if file.endswith(ext):
-                    return True
-
-    return False
-
-
-# TODO: This is a delicate operation, make sure its as safe as possible.
-def copy_to_mod_dir(dir, dest):
-    """Move the given directory to a new folder.
-
-    :dir: (str) Absolute path to the source directory.
-    :dest: (str) Absolute path to the destination mod directory.
-    :returns: (str) Absolute path to the moved directory.
-    """
-    new_dir = os.path.join(dest, os.path.basename(dir))
-    shutil.copytree(dir, new_dir)
-    return new_dir
+    if os.path.isdir(path):
+        return ModSourceDir(path)
+    else:
+        return ModSourceArchive(path)
 
 
 def get_full_path(path):
