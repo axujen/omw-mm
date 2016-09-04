@@ -109,8 +109,10 @@ class ModSourceDir(ModSource):
         return my_files
 
     def _install(self, dest):
-        new_dir = os.path.join(dest, os.path.basename(dir))
-        shutil.copytree(dir, new_dir)
+        new_dir = os.path.join(dest, self.name)
+        src_dir = os.path.join(self._path, self._get_mod_dir()[1:])
+        # print(src_dir)
+        shutil.copytree(src_dir, new_dir)
         return new_dir
 
 
