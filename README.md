@@ -3,7 +3,8 @@ omw-mm is my attempt at creating an advanced mod management suite for openmw.
 
 Right now a cli script is up and running (expect bugs though).
 This script can handle the following operations:
-  - Install a mod from a directory (archive support is being considered)
+  - Install a mod from a directory
+  - *New* Installation from archives
   - Uninstall an already installed mod
   - List currently installed mods
   - Enable/Disable plugins
@@ -28,7 +29,7 @@ optional arguments:
 
 Commands:
   <command>
-    install             Install a directory as mod
+    install             Install a mod
     uninstall           Uninstall a mod directory
     enable              Enable a plugin
     disable             disable a plugin
