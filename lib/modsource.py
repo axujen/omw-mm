@@ -1,9 +1,11 @@
 # This module is used to create an abstraction layer between mods stored in
 # directories and mods stored in archives.
-import libarchive
 import os
 import tempfile
 import shutil
+import core
+core.setup_libarchive()
+import libarchive.public as libarchive
 
 
 class ModSource(object):
@@ -126,7 +128,7 @@ class ModSourceArchive(ModSource):
         with libarchive.file_reader(self._path) as archive:
             # Note using entry.isdir or other bool occasionally does not work
             for entry in archive:
-                dir, file = os.path.split(entry.path)
+                dir, file = os.path.split(entry.pathname)
                 dir = "/" + dir
                 if dir not in files.keys():
                     files[dir] = []
@@ -143,7 +145,8 @@ class ModSourceArchive(ModSource):
         prev_dir = os.path.abspath(os.getcwd())
         os.chdir(tempdir)
         try:
-            libarchive.extract_file(self._path)
+            for file in libarchive.file_pour(self._path):
+                pass
             if root == "/":
                 src = tempdir
                 name = self.name

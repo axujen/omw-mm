@@ -1,11 +1,14 @@
 # Core functions used in both CLI and GUI
+# Rule of thumb, imports from this projects modules should be done inside the
+# functions that call them.
 import os
 import sys
 import shutil
-from lib.modsource import ModSourceDir, ModSourceArchive
+import platform
 
 
 def get_modsource(path):
+    from modsource import ModSourceDir, ModSourceArchive
     """This will return a proper ModSource subclass for a given source.
     If path is a directory it returns ModSourceDir() class otherwise it returns
     ModSourceArchive()
@@ -145,3 +148,20 @@ def get_base_dir():
     """
     # os.path.realpath to resolve symlinks
     return os.path.realpath(sys.path[0])
+
+
+# This function exists because whoever wrote the libarchive module
+# didn't take into consideration cross-platform support for libarchive.
+# so im shipping pre-compiled libarchive libraries and manually setting
+# the PATH env variable to end all problems with libarchive.
+# TODO: Test the rest of the platforms if they are working
+# So far tested linux64 and windows32
+def setup_libarchive():
+    """Setup the path variable to point to the bundled libarchive libs."""
+    OS = platform.system()
+    ARCH = platform.architecture()[0]
+    libdir = os.path.join(get_base_dir(), "lib/bin/%s/%s" % (OS, ARCH))
+
+    # Put my libs in the start of PATH so system-wide libs take precedence?
+    # May put it in the end if issues arise.
+    os.environ["PATH"] = os.pathsep.join((libdir, os.environ["PATH"]))
