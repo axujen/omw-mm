@@ -295,13 +295,13 @@ def create_arg_parser(*args, **kwargs):
             help="Path to openmw.cfg")
 
     # Install command.
-    parser_i = subparser.add_parser("install", help="Install a directory as mod")
-    parser_i.add_argument("src", metavar="directory",
-            help="Path to the directory to be installed")
+    parser_i = subparser.add_parser("install", help="Install a mod")
+    parser_i.add_argument("src", metavar="path",
+            help="Path to the archive/directory to be installed")
     parser_i.add_argument("dest", metavar="destination", nargs="?", default=mods_dir,
-            help="Destination directory")
+            help="Destination mods directory")
     parser_i.add_argument("-f", "--force", action="store_true", dest="force", default=False,
-            help="Don't check if the directory is an actual mod directory")
+            help="Don't check if the archive/directory is an actual mod")
 
     # Uninstall command
     parser_u = subparser.add_parser("uninstall", help="Uninstall a mod directory")
