@@ -161,7 +161,17 @@ def setup_libarchive():
     OS = platform.system()
     ARCH = platform.architecture()[0]
     libdir = os.path.join(get_base_dir(), "lib/bin/%s/%s" % (OS, ARCH))
+    curdir = os.getcwd()
+    # For some reason OSX won't load the library properly if the script isn't
+    # in the lib dir, this is a hack untill to fix the probem untill i get to
+    # the bottom of this.
+    try:
+        os.chdir(libdir)
 
-    # Put my libs in the start of PATH so system-wide libs take precedence?
-    # May put it in the end if issues arise.
-    os.environ["PATH"] = os.pathsep.join((libdir, os.environ["PATH"]))
+        # Put my libs in the start of PATH so system-wide libs take precedence?
+        # May put it in the end if issues arise.
+        os.environ["PATH"] = os.pathsep.join((libdir, os.environ["PATH"]))
+        import libarchive.public as libarchive
+        return libarchive
+    finally:
+        os.chdir(curdir)

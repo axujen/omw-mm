@@ -4,8 +4,7 @@ import os
 import tempfile
 import shutil
 import core
-core.setup_libarchive()
-import libarchive.public as libarchive
+libarchive = core.setup_libarchive()
 
 
 class ModSource(object):
