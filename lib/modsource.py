@@ -4,6 +4,7 @@ import os
 import tempfile
 import shutil
 import core
+# see core.py to understand why this was done.
 libarchive = core.setup_libarchive()
 
 
@@ -148,7 +149,7 @@ class ModSourceArchive(ModSource):
                 pass
             if root == "/":
                 src = tempdir
-                name = self.name
+                name = os.path.splitext(self.name)[0]
             else:
                 src = os.path.join(tempdir, root[1:])
                 name = os.path.split(root)[-1]

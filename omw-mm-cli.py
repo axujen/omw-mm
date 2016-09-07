@@ -133,7 +133,7 @@ def install_mod(omw_cfg, src, dest, force=False):
 
     # Copy the mod
     new_dir = mod_source.install(dest)
-    print("Copied %s to %s" % (name, new_dir))
+    print("Installing %s to %s" % (name, new_dir))
 
     # Add an entry
     entry = ConfigEntry("data", new_dir)
