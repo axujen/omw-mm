@@ -93,7 +93,7 @@ class Esm(object):
         """Merge leveled lists from another esm with this one.
 
         :other: (Esm) esm instance to be merged with this.
-        :returns: (set) (diff, num_diff) diff is a dictionary of changed and merged lists, num_diff is the number of changes.
+        :returns: (dict) merged and Added leveled lists
         """
         if not isinstance(other, Esm):
             raise ValueError("Expecting Esm object, got %s" % other)
@@ -101,11 +101,11 @@ class Esm(object):
         diff = {}
         num_diff = 0
         for rec in ("LEVC", "LEVI"):
-            diff[rec] = {"Merged": {}, "Added": {}}
+            diff[rec] = {"Merged": {}, "Added": {}}  # Keep track of whats merged and whats added
             my_records = {r._name: r for r in self.find_records(rec)}
             other_records = {r._name: r for r in other.find_records(rec)}
             for id, record in other_records.items():
-                if id not in my_records:
+                if id not in my_records:  # Add all LEV records so we can tell which ones need merging in the future
                     my_records[id] = record
                     diff[rec]["Added"][id] = my_records[id]
                 else:
@@ -129,7 +129,14 @@ class Esm(object):
             self.header.add_master(other._path)
             self.header.set_num_records(len(self.get_records()))
 
-        return (diff, num_diff)
+        return diff
+
+    def post_merge(self):
+        """Call this function after merging LEV lists to remove unmerged lists."""
+        for rec in ("LEVC", "LEVI"):
+            unmerged = [r for r in self.find_records(rec) if not r._merged]
+            for record in unmerged:
+                self._records.remove(record)
 
 
 # This class is intended as read-only, Create a subclass so you can tell it how to
@@ -269,6 +276,7 @@ class EsmLEVRecord(EsmRecord):
         """See EsmRecord for arguments."""
         super(EsmLEVRecord, self).__init__(*args, **kwargs)
         self.unpack_data()
+        self._merged = False
 
     def unpack_data(self):
         """Unpack the data into meaningful values."""
@@ -372,6 +380,8 @@ class EsmLEVRecord(EsmRecord):
 
         # Flag as modified
         self._changed = True
+        # Flag as merged
+        self._merged = True
 
 
 class EsmTES3Record(EsmRecord):

@@ -62,8 +62,7 @@ def clean_mods(omw_cfg):
         omw_cfg.write()
 
 
-# TODO: Autoclean and Autodelete options in the config.
-# Maybe not Autodelete?
+# TODO: Autoclean and Autodelete options in the config
 def uninstall_mod(omw_cfg, mod_name, clean=False, rm=False):
     """Uninstall a mod by removing its entry from openmw.cfg
 
@@ -112,6 +111,7 @@ def uninstall_mod(omw_cfg, mod_name, clean=False, rm=False):
 
 
 # TODO: Better handling of already installed mods
+# TODO: install mod as name command
 def install_mod(omw_cfg, src, dest, force=False):
     """Install a mod and add appropriate openmw.cfg entry.
 
@@ -253,28 +253,19 @@ def merge_lists(omw_cfg, out=None):
                     print("Merging: %s" % plugin.get_name())
                     to_merge = Esm(plugin.get_path())
                     to_merge.unpack()
-                    diff, ndiff = merged.merge_with(to_merge)
+                    diff = merged.merge_with(to_merge)
 
                     # Pretty Print stuff
-                    if ndiff:
-                        for rec in diff.keys():
-                            if rec == 'LEVC':
-                                lname = "Leveled Creatures"
-                            else:
-                                lname = "Leveled Items"
-                            printed = False
-                            for status in diff[rec].keys():
-                                if not diff[rec][status]:
-                                    continue
-                                if not printed:
-                                    print("\t ==== %s ====" % lname)
-                                    printed = True
-                                print("\t ==== %s ====" % status)
-                                for name in sorted(diff[rec][status].keys()):
-                                    print("\t\t%s" % name.rstrip("\x00"))
+                    for rec in ("LEVC", "LEVI"):
+                        if diff[rec]["Merged"]:
+                            print("\t%s records merged:" % rec)
+                            for record in diff[rec]["Merged"]:
+                                print("\t\t%s" % record)
+
+    merged.post_merge()
+
     if not out:
         out = "./Merged_Lists.esp"
-
     merged.write(out)
 
 
