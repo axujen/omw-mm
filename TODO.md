@@ -1,6 +1,7 @@
 # Functionality
 - GUI
 - Mlox load order sorting
+- Profile support
 - Setup.py
 - Proper user documentation
 
