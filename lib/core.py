@@ -155,7 +155,7 @@ def get_base_dir():
 # so im shipping pre-compiled libarchive libraries and manually setting
 # the PATH env variable to end all problems with libarchive.
 # TODO: Test the rest of the platforms if they are working
-# So far tested linux64 and windows32
+# So far tested linux64 windows32 and OSX Snow Leopard
 def setup_libarchive():
     """Setup the path variable to point to the bundled libarchive libs."""
     OS = platform.system()
@@ -163,8 +163,8 @@ def setup_libarchive():
     libdir = os.path.join(get_base_dir(), "lib/bin/%s/%s" % (OS, ARCH))
     curdir = os.getcwd()
     # For some reason OSX won't load the library properly if the script isn't
-    # in the lib dir, this is a hack untill to fix the probem untill i get to
-    # the bottom of this.
+    # in the lib dir, this is a hack to fix the probem untill i get to the
+    # bottom of this.
     try:
         os.chdir(libdir)
 
