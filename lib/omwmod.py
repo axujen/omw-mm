@@ -114,7 +114,7 @@ class OmwMod(object):
             raise ValueError("Mod %s is not currently installed" % self.get_name())
 
         cfg = self.get_config()
-        if not self.get_entry() in cfg:
+        if not self.get_entry() in cfg.get_entries():
             raise ValueError("%s does not have an entry in %s" % (self.get_name(), cfg.file))
 
         index = 1
