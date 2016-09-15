@@ -22,12 +22,13 @@ class Esm(object):
         """
         records = []
         for record in self._records:
-            if record.get_id() == id:
+            if record.id == id:
                 records.append(record)
 
         return records
 
-    def get_records(self):
+    @property
+    def records(self):
         return self._records
 
     def unpack(self):
@@ -113,8 +114,8 @@ class Esm(object):
                     diff[rec]["Merged"][id] = my_records[id]
 
             # Replace the old records with the new merged ones:
-            for index, record in enumerate(self.get_records()):
-                if record.get_id() == rec:
+            for index, record in enumerate(self.records):
+                if record.id == rec:
                     if record._name in diff[rec]["Merged"]:
                         self._records[index] = diff[rec]["Merged"][record._name]
 
@@ -127,7 +128,7 @@ class Esm(object):
         # Update the header with a new master if we merged any changes.
         if num_diff:
             self.header.add_master(other._path)
-            self.header.set_num_records(len(self.get_records()))
+            self.header.record_count = len(self.records)
 
         return diff
 
@@ -155,29 +156,33 @@ class EsmRecord(object):
         self._delflag, self._recflag = delflag, recflag
         self._changed = False
 
-    def get_id(self):
+    @property
+    def id(self):
         return self._id
 
-    def get_size(self):
+    @property
+    def size(self):
         if self._changed:
-            self._size = len(self.get_data())
+            self._size = len(self.data)
 
         return self._size
 
-    def get_data(self):
+    @property
+    def data(self):
         if self._changed:
             self.__data = self.pack_data()
             self._changed = False
 
         return self.__data
 
-    def get_subrecords(self):
+    @property
+    def subrecords(self):
         """Unpack the data of a record into subrecords.
 
         :returns: (list) List of subrecords
         """
         subrecords = []
-        data = self.get_data()
+        data = self.data
         stream = StringIO(data)
         EOF = len(data)
         while not stream.tell() == EOF:
@@ -213,14 +218,14 @@ class EsmRecord(object):
 
         :returns: (str)
         """
-        return pack("4s3i", self.get_id(), self.get_size(), self._delflag, self._recflag)
+        return pack("4s3i", self.id, self.size, self._delflag, self._recflag)
 
     def pack(self):
         """Convert the record back to binary format.
 
         :returns: (str)
         """
-        return self.pack_header() + self.get_data()
+        return self.pack_header() + self.data
 
     # This method only exists to be overriden by subclasses
     def pack_data(self):
@@ -244,13 +249,16 @@ class EsmSubrecord(object):
         self._size = size
         self._data = data
 
-    def get_id(self):
+    @property
+    def id(self):
         return self._id
 
-    def get_size(self):
+    @property
+    def size(self):
         return self._size
 
-    def get_data(self):
+    @property
+    def data(self):
         return self._data
 
     def pack_header(self):
@@ -258,14 +266,14 @@ class EsmSubrecord(object):
 
         :returns: (str)
         """
-        return pack("4si", self.get_id(), self.get_size())
+        return pack("4si", self.id, self.size)
 
     def pack(self):
         """Convert the subrecord to binary format.
 
         :returns: (str)
         """
-        return self.pack_header() + self.get_data()
+        return self.pack_header() + self.data
 
 
 # -- Specific Records.
@@ -273,7 +281,6 @@ class EsmLEVRecord(EsmRecord):
     """Leveled Items/Creatures Record."""
 
     def __init__(self, *args, **kwargs):
-        """See EsmRecord for arguments."""
         super(EsmLEVRecord, self).__init__(*args, **kwargs)
         self.unpack_data()
         self._merged = False
@@ -281,56 +288,56 @@ class EsmLEVRecord(EsmRecord):
     def unpack_data(self):
         """Unpack the data into meaningful values."""
         self._objects = []
-        subrecords = self.get_subrecords()
+        subrecords = self.subrecords
         for sub in subrecords:
             # List ID
-            if sub.get_id() == "NAME":
-                self._name = sub.get_data()
+            if sub.id == "NAME":
+                self._name = sub.data
 
             # List specific flags
-            elif sub.get_id() == "DATA":
+            elif sub.id == "DATA":
                 self._calc_all_levels = False
                 self._calc_all_items = False
-                flag = unpack("i", sub.get_data())
+                flag = unpack("i", sub.data)
                 # Verify the correct value of these flags.
                 # wrye mash uses 1: for all_items and 2: for all_levels
                 # while every other source on the esm format says the opposite
                 # Note: openmw-cs also uses the same values as wrye mash.
-                if self.get_id() == "LEVI":
+                if self.id == "LEVI":
                     if flag == 1:
                         self._calc_all_items = True
                     elif flag == 2:
                         self._calc_all_levels = True
                     elif flag == 3:
                         self._calc_all_items = self._calc_all_levels = True
-                elif self.get_id() == "LEVC":
+                elif self.id == "LEVC":
                     if flag == 1:
                         self._calc_all_levels = True
             # Chance None
-            elif sub.get_id() == "NNAM":
-                self._chance_none = unpack("B", sub.get_data())[0]
+            elif sub.id == "NNAM":
+                self._chance_none = unpack("B", sub.data)[0]
 
             # Number of creatures/items in the list
-            elif sub.get_id() == "INDX":
-                self._count = unpack("i", sub.get_data())[0]
+            elif sub.id == "INDX":
+                self._count = unpack("i", sub.data)[0]
 
             # Creatue/Item ID
-            elif sub.get_id() == "CNAM" or sub.get_id() == "INAM":
-                object_id = sub.get_data()
+            elif sub.id == "CNAM" or sub.id == "INAM":
+                object_id = sub.data
 
             # PC Level for the object
-            elif sub.get_id() == "INTV":
-                pc_level = unpack("h", sub.get_data())[0]
+            elif sub.id == "INTV":
+                pc_level = unpack("h", sub.data)[0]
                 self._objects.append((pc_level, object_id))
             # Unknown
             else:
-                raise ValueError("Unknown subrecord %s" % sub.get_id())
+                raise ValueError("Unknown subrecord %s" % sub.id)
 
     def pack_data(self):
         out = ''
         out += self.pack_subrecord("NAME", self._name)
         # List specific flags
-        if self.get_id() == "LEVC":
+        if self.id == "LEVC":
             flag = 1 * self._calc_all_levels
             otype = "CNAM"
         else:
@@ -359,8 +366,8 @@ class EsmLEVRecord(EsmRecord):
         if not isinstance(other, EsmLEVRecord):
             raise ValueError("Cannot merge leveled list record with %s" % other)
 
-        if not self.get_id() == other.get_id():
-            raise ValueError("Cannot merge records %s and %s" % (self.get_id(), other.get_id()))
+        if not self.id == other.id:
+            raise ValueError("Cannot merge records %s and %s" % (self.id, other.id))
 
         # Merge flags
         self._calc_all_items = self._calc_all_items or other._calc_all_items
@@ -387,7 +394,6 @@ class EsmLEVRecord(EsmRecord):
 class EsmTES3Record(EsmRecord):
     """Header record, contains auth and description of the plugin along with its dependencies"""
     def __init__(self, *args, **kwargs):
-        """See EsmRecord for arguments."""
         super(EsmTES3Record, self).__init__(*args, **kwargs)
         self.unpack_data()
 
@@ -395,13 +401,13 @@ class EsmTES3Record(EsmRecord):
         """Unpack the record."""
         mname = []
         msize = []
-        for sub in self.get_subrecords():
-            if sub.get_id() == "HEDR":
-                ver, ftype, auth, desc, num_records = unpack("fi32s256si", sub.get_data())
-            if sub.get_id() == "MAST":
-                mname.append(sub.get_data().rstrip("\x00"))
-            if sub.get_id() == "DATA":
-                msize.append(unpack("l", sub.get_data())[0])
+        for sub in self.subrecords:
+            if sub.id == "HEDR":
+                ver, ftype, auth, desc, num_records = unpack("fi32s256si", sub.data)
+            if sub.id == "MAST":
+                mname.append(sub.data.rstrip("\x00"))
+            if sub.id == "DATA":
+                msize.append(unpack("l", sub.data)[0])
 
         self._ver = ver
         self._ftype = ftype
@@ -423,35 +429,28 @@ class EsmTES3Record(EsmRecord):
 
         return out
 
-    def get_author(self):
+    @property
+    def author(self):
         return self._auth
 
-    def get_desc(self):
+    @property
+    def desc(self):
         return self._desc
 
-    def get_version(self):
+    @property
+    def version(self):
         return self._ver
 
-    def get_record_count(self):
+    @property
+    def record_count(self):
         return self._num_records
 
-    def get_masters(self):
+    @property
+    def masters(self):
         return self._masters
 
-    def set_author(self, auth):
-        if len(auth) > 32:
-            raise ValueError("Author cannot be longer than 32 characters, got %s" % auth)
-        self._auth = auth
-
-        self._changed = True
-
-    def set_desc(self, desc):
-        if len(desc) > 256:
-            raise ValueError("Description cannot be longer  than 256 characters, got %s" % desc)
-        self._desc = desc
-        self._changed = True
-
-    def set_num_records(self, num):
+    @record_count.setter
+    def record_count(self, num):
         self._num_records = num
         self._changed = True
 
