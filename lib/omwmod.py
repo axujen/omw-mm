@@ -206,7 +206,7 @@ class OmwPlugin(object):
         :returns: (int)
         """
         if not self.is_enabled():
-            raise ValueError("Plugin %s is not enabled, does not have a load order" % self.get_name())
+            return None
 
         cfg = self.get_config()
         index = 1
