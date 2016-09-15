@@ -64,13 +64,13 @@ def get_plugins(cfg):
     :cfg: (ConfigFile) openmw.cfg object.
     :returns: (list) list of all plugin objects referenced in openmw.cfg.
     """
-    mods = cfg.get_mods()
+    mods = cfg.mods
     plugins = []
     for mod in mods:
-        if not mod.is_installed():
+        if not mod.is_installed:
             continue
 
-        for plugin in mod.get_plugins():
+        for plugin in mod.plugins:
             plugins.append(plugin)
 
     return plugins
@@ -84,10 +84,10 @@ def get_enabled_plugins(cfg):
     """
     plugins = []
     for plugin in get_plugins(cfg):
-        if plugin.is_enabled():
+        if plugin.is_enabled:
             plugins.append(plugin)
 
-    return sorted(plugins, key=lambda plugin: plugin.get_order())
+    return sorted(plugins, key=lambda plugin: plugin.order)
 
 
 def get_disabled_plugins(cfg):
@@ -98,7 +98,7 @@ def get_disabled_plugins(cfg):
     """
     plugins = []
     for plugin in get_plugins(cfg):
-        if not plugin.is_enabled():
+        if not plugin.is_enabled:
             plugins.append(plugin)
 
     return plugins
@@ -111,8 +111,8 @@ def get_orphaned_plugins(cfg):
     :returns: (list)
     """
 
-    installed_plugins = [p.get_name() for p in get_plugins(cfg)]
-    plugins = [e.get_value() for e in cfg.find_key("content")]
+    installed_plugins = [p.name for p in get_plugins(cfg)]
+    plugins = [e.value for e in cfg.find_key("content")]
     orphaned = []
 
     for plugin in plugins:
@@ -128,13 +128,13 @@ def find_plugin(cfg, plugin_name):
     :plugin_name: (str) Plugin name
     :returns: (OmwPlugin or None)
     """
-    mods = cfg.get_mods()
+    mods = cfg.mods
     for mod in mods:
-        plugins = mod.get_plugins()
+        plugins = mod.plugins
         if not plugins:
             continue
         for plugin in plugins:
-            if plugin.get_name() == plugin_name:
+            if plugin.name == plugin_name:
                 return plugin
 
     return None

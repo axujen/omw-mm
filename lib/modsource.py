@@ -4,6 +4,7 @@ import os
 import tempfile
 import shutil
 import core
+
 # see core.py to understand why this was done.
 libarchive = core.setup_libarchive()
 
@@ -15,28 +16,48 @@ class ModSource(object):
         :path: (str) Path to the mod source
         """
         self._path = path
-        self.name = os.path.basename(self._path)
+        self._name = os.path.basename(self._path)
 
         self._files = self._get_files()
         self._dirs = sorted(self._files.keys())
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def path(self):
+        return self._path
+
+    @property
+    def is_mod(self):
+        return bool(self._get_mod_dir())
+
+    @property
+    def files(self):
+        return self._files
+
+    @property
+    def dirs(self):
+        return self._dirs
 
     def _get_resource_dirs(self):
         resources = ("textures", "meshes", "icons", "fonts", "sound", "bookart",
                      "splash", "video")
         resource_dirs = []
-        for dir in self._dirs:
-            if os.path.split(dir)[1].lower() in resources:
-                resource_dirs.append(dir)
+        for dirpath in self.dirs:
+            if os.path.split(dirpath)[1].lower() in resources:
+                resource_dirs.append(dirpath)
 
         return resource_dirs
 
     def _get_plugins(self):
         extensions = (".esp", ".esm", "omwaddon")
         plugins = []
-        for dir in self._dirs:
-            for file in self._files[dir]:
-                if file.lower().endswith(extensions):
-                    plugins.append(os.path.join(dir, file))
+        for dirpath in self.dirs:
+            for fname in self.files[dirpath]:
+                if fname.lower().endswith(extensions):
+                    plugins.append(os.path.join(dirpath, fname))
 
         return plugins
 
@@ -56,20 +77,13 @@ class ModSource(object):
                 root = os.path.commonprefix(resources)
         return root
 
-    def is_mod(self):
-        """Check if this archive is an actual mod.
-
-        :returns: (bool)
-        """
-        return bool(self._get_mod_dir())
-
     def install(self, dest):
         """Install the mod to the destination directory.
 
         :dest: (str) Destination.
         :returns: (str) The path of the newly installed mod
         """
-        if not self.is_mod():
+        if not self.is_mod:
             raise ValueError("%s is not detected as a valid mod" % self.name)
 
         return self._install(dest)
@@ -103,17 +117,16 @@ class ModSourceDir(ModSource):
 
     def _get_files(self):
         my_files = dict()
-        for root, _, files in os.walk(self._path):
-            if root == self._path:
+        for root, _, files in os.walk(self.path):
+            if root == self.path:
                 my_files["/"] = files
             else:
-                my_files[root[len(self._path):]] = files
+                my_files[root[len(self.path):]] = files
         return my_files
 
     def _install(self, dest):
         new_dir = os.path.join(dest, self.name)
-        src_dir = os.path.join(self._path, self._get_mod_dir()[1:])
-        # print(src_dir)
+        src_dir = os.path.join(self.path, self._get_mod_dir()[1:])
         shutil.copytree(src_dir, new_dir)
         return new_dir
 
@@ -125,7 +138,7 @@ class ModSourceArchive(ModSource):
 
     def _get_files(self):
         files = dict()
-        with libarchive.file_reader(self._path) as archive:
+        with libarchive.file_reader(self.path) as archive:
             # Note using entry.isdir or other bool occasionally does not work
             for entry in archive:
                 dir, file = os.path.split(entry.pathname)
@@ -145,7 +158,7 @@ class ModSourceArchive(ModSource):
         prev_dir = os.path.abspath(os.getcwd())
         os.chdir(tempdir)
         try:
-            for file in libarchive.file_pour(self._path):
+            for _ in libarchive.file_pour(self.path):
                 pass
             if root == "/":
                 src = tempdir

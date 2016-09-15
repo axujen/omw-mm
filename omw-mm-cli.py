@@ -1,7 +1,8 @@
 #!/usr/bin/env python2.7
 import os
 from argparse import ArgumentParser
-from lib.omwconfig import ConfigFile, ConfigEntry
+
+from lib.omw import ConfigFile, ConfigEntry
 from lib.esm import Esm
 from lib.config import config
 from lib import core
@@ -16,18 +17,18 @@ def list_mods(omw_cfg, mods_dir=None, path=False):
     """
 
     omw_cfg = ConfigFile(core.get_full_path(omw_cfg))
-    mods = omw_cfg.get_mods()
+    mods = omw_cfg.mods
 
     if mods_dir:
         mods_dir = core.get_full_path(mods_dir)
-        mods = [m for m in mods if os.path.dirname(m.get_path()) == mods_dir]
+        mods = [m for m in mods if os.path.dirname(m.path) == mods_dir]
 
     if path:
         for mod in mods:
-            print(mod.get_path())
+            print(mod.path)
     else:
         for mod in mods:
-            print(mod.get_name())
+            print(mod.name)
 
 
 def clean_mods(omw_cfg):
@@ -40,8 +41,8 @@ def clean_mods(omw_cfg):
     # Remove invalid data entries
     bad_mods = []
     for entry in omw_cfg.find_key("data"):
-        if not os.path.exists(entry.get_value()):
-            print("Removing data entry for %s" % entry.get_value())
+        if not os.path.exists(entry.value):
+            print("Removing data entry for %s" % entry.value)
             bad_mods.append(entry)
             omw_cfg.remove(entry)
 
@@ -85,8 +86,8 @@ def uninstall_mod(omw_cfg, mod_name, clean=False, rm=False):
 
     omw_cfg = ConfigFile(core.get_full_path(omw_cfg))
 
-    for mod in omw_cfg.get_mods():
-        if mod.get_path() == mod_path:
+    for mod in omw_cfg.mods:
+        if mod.path == mod_path:
             mod = mod
             break
     else:
@@ -94,20 +95,20 @@ def uninstall_mod(omw_cfg, mod_name, clean=False, rm=False):
         raise SystemExit(1)
 
     if clean:
-        plugins = mod.get_plugins()
+        plugins = mod.plugins
         if plugins:
             for plugin in plugins:
-                if plugin.is_enabled():
-                    print("Disabling %s" % plugin.get_name())
+                if plugin.is_enabled:
+                    print("Disabling %s" % plugin.name)
                     plugin.disable()
 
-    print("Removing entry %s from openmw.cfg" % mod.get_entry())
-    omw_cfg.remove(mod.get_entry())
+    print("Removing entry %s from openmw.cfg" % mod.entry)
+    omw_cfg.remove(mod.entry)
     omw_cfg.write()
 
     if rm:
-        print("Deleting mod in %s" % mod.get_path())
-        core.rm_mod_dir(mod.get_path())
+        print("Deleting mod in %s" % mod.path)
+        core.rm_mod_dir(mod.path)
 
 
 # TODO: Better handling of already installed mods
@@ -126,7 +127,7 @@ def install_mod(omw_cfg, src, dest, force=False):
     mod_source = core.get_modsource(src)
     name = mod_source.name
 
-    if not mod_source.is_mod() and not force:
+    if not mod_source.is_mod and not force:
         print("%s is not detected as a mod,\
               if you wish to install it anyway use the --force flag" % name)
         raise SystemExit(1)
@@ -152,27 +153,27 @@ def list_plugins(omw_cfg, tree=False):
     omw_cfg = ConfigFile(core.get_full_path(omw_cfg))
 
     if tree:
-        mods = omw_cfg.get_mods()
+        mods = omw_cfg.mods
         for mod in mods:
-            plugins = mod.get_plugins()
+            plugins = mod.plugins
             if not plugins:  # Skip modless plugins
                 continue
 
-            print("%s:" % mod.get_name())
+            print("%s:" % mod.name)
             disabled_plugins = []  # Save disabled plugins for last
             for plugin in plugins:
-                if plugin.is_enabled():
-                    print("\t(%d) %s" % (plugin.get_order(), plugin.get_name()))
+                if plugin.is_enabled:
+                    print("\t(%d) %s" % (plugin.order, plugin.name))
                 else:
                     disabled_plugins.append(plugin)
             if disabled_plugins:
                 for plugin in disabled_plugins:
-                    print("\t- %s" % plugin.get_name())
+                    print("\t- %s" % plugin.name)
     else:
         for plugin in core.get_enabled_plugins(omw_cfg):
-            print("(%d) %s" % (plugin.get_order(), plugin.get_name()))
+            print("(%d) %s" % (plugin.order, plugin.name))
         for plugin in core.get_disabled_plugins(omw_cfg):
-            print("- " + plugin.get_name())
+            print("- " + plugin.name)
 
     # Print orphaned plugins
     orphaned = core.get_orphaned_plugins(omw_cfg)
@@ -195,7 +196,7 @@ def enable_plugin(omw_cfg, plugin_name):
         print("Could not find plugin %s." % plugin_name)
         raise SystemExit(1)
 
-    if plugin.is_enabled():
+    if plugin.is_enabled:
         print("Plugin %s is already enabled." % plugin_name)
         raise SystemExit(1)
 
@@ -219,7 +220,7 @@ def disable_plugin(omw_cfg, plugin_name):
         print("Could not find plugin %s." % plugin_name)
         raise SystemExit(1)
 
-    if not plugin.is_enabled():
+    if not plugin.is_enabled:
         print("Plugin %s is already disabled." % plugin_name)
         raise SystemExit(1)
 
@@ -236,7 +237,7 @@ def merge_lists(omw_cfg, out=None):
     """
 
     cfg = ConfigFile(omw_cfg)
-    mods = cfg.get_mods()
+    mods = cfg.mods
     if not mods:
         print("Nothing to merge!")
         raise SystemExit(1)
@@ -246,12 +247,12 @@ def merge_lists(omw_cfg, out=None):
     merged.unpack()
 
     for mod in mods:
-        plugins = mod.get_plugins()
+        plugins = mod.plugins
         if plugins:
             for plugin in plugins:
-                if plugin.get_name() not in blacklist and plugin.is_enabled():
-                    print("Merging: %s" % plugin.get_name())
-                    to_merge = Esm(plugin.get_path())
+                if plugin.name not in blacklist and plugin.is_enabled:
+                    print("Merging: %s" % plugin.name)
+                    to_merge = Esm(plugin.path)
                     to_merge.unpack()
                     diff = merged.merge_with(to_merge)
 
