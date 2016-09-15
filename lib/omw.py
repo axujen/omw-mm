@@ -104,7 +104,7 @@ class ConfigFile(object):
                     mod = OmwMod(entry.value, entry)
                     self.mods.append(mod)
 
-    def _tostring(self):
+    def tostring(self):
         """Convert entries into a string ready to save on disk."""
         return "\n".join((str(e) for e in self.entries))
 
