@@ -1,5 +1,6 @@
 import wx
 import core
+from ObjectListView import ObjectListView, ColumnDefn
 
 
 class GUI(wx.App):
@@ -88,17 +89,48 @@ class ListPanel(wx.Panel):
     """Generic class for list tabs (mods/plugins)"""
     def __init__(self, parent):
         super(ListPanel, self).__init__(parent)
-        self.list = wx.ListCtrl(self, style=wx.LC_REPORT | wx.LC_HRULES)
+
+        # -- List
+        self.list = ObjectListView(self, style=wx.LC_REPORT | wx.LC_HRULES, useAlternateBackColors=False)
+
         self.sizer = wx.BoxSizer()
         self.sizer.Add(self.list, 1, flag=wx.EXPAND | wx.GROW)
         self.SetSizerAndFit(self.sizer)
 
-    def PostInit(self):
-        for col in range(self.list.GetColumnCount()):
-            self.list.SetColumnWidth(col, -1)
+        # -- Right click menu
+        self.rmenu = None
+        self.list.Bind(wx.EVT_CONTEXT_MENU, self.OnContextMenu)
 
-    def AppendColumn(self, title):
-        self.list.InsertColumn(self.list.GetColumnCount(), title, width=wx.LIST_AUTOSIZE)
+    def OnContextMenu(self, event):
+        pos = self.ScreenToClient(event.GetPosition())
+        self.rmenu = wx.Menu()
+        menu_items = self._context_menu_items()
+        if menu_items:
+            for item in menu_items:
+                self.rmenu.AppendItem(item)
+                self.Bind(wx.EVT_MENU, self.OnContextMenuItem, item)
+        else:
+            self.rmenu.Append(wx.ID_NO, "Unimplemented!")
+
+        self.PopupMenu(self.rmenu, pos)
+        self.rmenu.Destroy()
+
+    def OnContextMenuItem(self, event):
+        label = self.rmenu.FindItemById(event.GetId()).GetText().replace(" ", "_")
+        callback = getattr(self, "OnContextMenu" + label, None)
+
+        if callable(callback):
+            callback(event)
+        else:
+            wx.MessageBox("OnContextMenu%s No Implemented!" % label)
+
+    # Implement these methods in subclasses
+    def _context_menu_items(self):
+        """Create a tuple of wx.MenuItem for the context menu
+
+        :returns: (tuple)
+        """
+        return ()
 
 
 class ModsPanel(ListPanel):
@@ -107,17 +139,11 @@ class ModsPanel(ListPanel):
         super(ModsPanel, self).__init__(parent)
         self._mods = mods
 
-        # -- Columns
-        self.AppendColumn("#")
-        self.AppendColumn("Name")
-        self.AppendColumn("Path")
+        self.list.SetColumns([
+            ColumnDefn("Name", valueGetter="get_name"),
+            ColumnDefn("Path", valueGetter="get_path")])
 
-        # -- Entries
-        for mod in self._mods:
-            entry = (mod.get_order(), mod.get_name(), mod.get_path())
-            self.list.Append(entry)
-
-        self.PostInit()
+        self.list.SetObjects(self._mods)
 
 
 class PluginsPanel(ListPanel):
@@ -127,17 +153,55 @@ class PluginsPanel(ListPanel):
         self._plugins = plugins
 
         # -- Columns
-        self.AppendColumn("#")
-        self.AppendColumn("Name")
-        self.AppendColumn("Mod")
+        column_order = ColumnDefn("#", valueGetter="get_order", checkStateGetter="is_enabled", checkStateSetter=self.TogglePlugin, fixedWidth=50)
+        column_name = ColumnDefn("Name", valueGetter="get_name")
+        column_mod = ColumnDefn("Mod", valueGetter="get_mod", stringConverter=lambda x: x.get_name())
+        self.list.InstallCheckStateColumn(column_order)
+        self.list.SetColumns((column_order, column_name, column_mod))
 
         # -- Entries
-        for plugin in self._plugins:
-            if plugin.is_enabled():
-                entry = (plugin.get_order(), plugin.get_name(), plugin.get_mod().get_name())
-            else:
-                entry = ("-", plugin.get_name(), plugin.get_mod().get_name())
+        self.list.SetObjects(self._plugins)
+        self.list.AutoSizeColumns()
 
-            self.list.Append(entry)
+    def Refresh(self):
+        self.list.SetObjects(self._plugins)
 
-        self.PostInit()
+    def EnablePlugin(self, plugin):
+        index = self._plugins.index(plugin)
+        self._plugins[index].enable()
+        self.Refresh()
+
+    def DisablePlugin(self, plugin):
+        index = self._plugins.index(plugin)
+        self._plugins[index].disable()
+        self.Refresh()
+
+    def TogglePlugin(self, plugin, state):
+        index = self._plugins.index(plugin)
+        if plugin.is_enabled():
+            self._plugins[index].disable()
+        else:
+            self._plugins[index].enable()
+
+        self.Refresh()
+
+    # -- Context Menu
+    def _context_menu_items(self):
+        enable = wx.MenuItem(id=wx.ID_ANY, text="Enable", help="Enable Selected Plugins")
+        disable = wx.MenuItem(id=wx.ID_ANY, text="Disable", help="Disable Selected Plugins")
+
+        return (enable, disable)
+
+    def OnContextMenuEnable(self, event):
+        selection = self.list.GetSelectedObjects()
+        if selection:
+            for plugin in selection:
+                if not plugin.is_enabled():
+                    self.EnablePlugin(plugin)
+
+    def OnContextMenuDisable(self, event):
+        selection = self.list.GetSelectedObjects()
+        if selection:
+            for plugin in selection:
+                if plugin.is_enabled():
+                    self.DisablePlugin(plugin)
