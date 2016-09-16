@@ -1,5 +1,6 @@
 # -*- coding: UTF-8 -*-
 import wx
+import wx.lib.mixins.listctrl as listmix
 import core
 from ObjectListView import ObjectListView, ColumnDefn
 
@@ -86,15 +87,74 @@ class MainWindow(wx.Frame):
 
 
 # -- Tabs
+class ListCtrl(ObjectListView, listmix.ListCtrlAutoWidthMixin):
+    def __init__(self, parent, style, useAlternateBackColors, rowFormatter):
+        ObjectListView.__init__(self, parent, style=style,
+                                useAlternateBackColors=useAlternateBackColors,
+                                rowFormatter=rowFormatter)
+        listmix.ListCtrlAutoWidthMixin.__init__(self)
+
+    # Fix int to string comparison, TODO: Submit bug report
+    def _HandleTypingEvent(self, evt):
+        import string
+        import time
+        if self.GetItemCount() == 0 or self.GetColumnCount() == 0:
+            return False
+
+        if evt.GetModifiers() != 0 and evt.GetModifiers() != wx.MOD_SHIFT:
+            return False
+
+        if evt.GetKeyCode() > wx.WXK_START:
+            return False
+
+        if evt.GetKeyCode() in (wx.WXK_BACK, wx.WXK_DELETE):
+            self.searchPrefix = u""
+            return True
+
+        # On which column are we going to compare values? If we should search on the
+        # sorted column, and there is a sorted column and it is searchable, we use that
+        # one, otherwise we fallback to the primary column
+        if self.typingSearchesSortColumn and self.GetSortColumn(
+        ) and self.GetSortColumn().isSearchable:
+            searchColumn = self.GetSortColumn()
+        else:
+            searchColumn = self.GetPrimaryColumn()
+
+        # On Linux, GetUnicodeKey() always returns 0 -- on my 2.8.7.1
+        # (gtk2-unicode)
+        if isinstance(evt.GetUnicodeKey(), int):
+            uniChar = chr(evt.GetKeyCode())
+        else:
+            uniChar = evt.GetUnicodeKey()
+        if uniChar not in string.printable:
+            return False
+
+        # On Linux, evt.GetTimestamp() isn't reliable so use time.time()
+        # instead
+        timeNow = time.time()
+        if (timeNow - self.whenLastTypingEvent) > self.SEARCH_KEYSTROKE_DELAY:
+            self.searchPrefix = uniChar
+        else:
+            self.searchPrefix += uniChar
+        self.whenLastTypingEvent = timeNow
+
+        # self.__rows = 0
+        self._FindByTyping(searchColumn, self.searchPrefix)
+        # print "Considered %d rows in %2f secs" % (self.__rows, time.time() -
+        # timeNow)
+
+        return True
+
+
 class ListPanel(wx.Panel):
     """Generic class for list tabs (mods/plugins)"""
     def __init__(self, parent):
         super(ListPanel, self).__init__(parent)
 
         # -- List
-        self.list = ObjectListView(self, style=wx.LC_REPORT,
-                                   useAlternateBackColors=False,
-                                   rowFormatter=self._row_formatter)
+        self.list = ListCtrl(self, style=wx.LC_REPORT,
+                             useAlternateBackColors=False,
+                             rowFormatter=self._row_formatter)
 
         self.sizer = wx.BoxSizer()
         self.sizer.Add(self.list, 1, flag=wx.EXPAND | wx.GROW)
