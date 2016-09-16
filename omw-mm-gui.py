@@ -1,6 +1,6 @@
 #!/usr/bin/env python2.7
 from lib.gui import GUI
-from lib.omwconfig import ConfigFile
+from lib.omw import ConfigFile
 from lib.config import config
 
 if __name__ == "__main__":
