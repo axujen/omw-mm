@@ -2,7 +2,7 @@
 import os
 from argparse import ArgumentParser
 
-from lib.omw import ConfigFile, ConfigEntry
+from lib.omw import ConfigFile, OmwMod
 from lib.esm import Esm
 from lib.config import config
 from lib import core
@@ -40,22 +40,21 @@ def clean_mods(omw_cfg):
 
     # Remove invalid data entries
     bad_mods = []
-    for entry in omw_cfg.find_key("data"):
-        if not os.path.exists(entry.value):
-            print("Removing data entry for %s" % entry.value)
-            bad_mods.append(entry)
-            omw_cfg.remove(entry)
+    for mod in omw_cfg.mods:
+        if not os.path.exists(mod.path):
+            print("Removing non-existing mod entry for %s" % mod.path)
+            mod.disable()
+            bad_mods.append(mod)
 
     if not bad_mods:
         print("No invalid data entries found!")
 
     # Remove Invalid content entries (Perhaps this should have a user switch?)
-    bad_plugins = core.get_orphaned_plugins(omw_cfg)
+    bad_plugins = core.get_plugins_orphaned(omw_cfg)
     if bad_plugins:
         for plugin in bad_plugins:
-            entry = ConfigEntry("content", plugin)
-            print("Removing content entry for %s" % plugin)
-            omw_cfg.remove(entry)
+            print("Removing non-existing plugin entry for %s" % plugin.name)
+            plugin.disable()
     else:
         print("No invalid content entries found!")
 
@@ -65,7 +64,7 @@ def clean_mods(omw_cfg):
 
 # TODO: Autoclean and Autodelete options in the config
 def uninstall_mod(omw_cfg, mod_name, clean=False, rm=False):
-    """Uninstall a mod by removing its entry from openmw.cfg
+    """Uninstall a mod by removing it from openmw.cfg
 
     :omw_cfg: (str) Path to openmw.cfg.
     :mod_name: (str) Name or path of the directory containing the mod.
@@ -95,15 +94,11 @@ def uninstall_mod(omw_cfg, mod_name, clean=False, rm=False):
         raise SystemExit(1)
 
     if clean:
-        plugins = mod.plugins
-        if plugins:
-            for plugin in plugins:
-                if plugin.is_enabled:
-                    print("Disabling %s" % plugin.name)
-                    plugin.disable()
+        for plugin in mod.plugins_enabled:
+            plugin.disable()
 
-    print("Removing entry %s from openmw.cfg" % mod.entry)
-    omw_cfg.remove(mod.entry)
+    print("Disabling %s" % mod.name)
+    mod.disable()
     omw_cfg.write()
 
     if rm:
@@ -114,7 +109,7 @@ def uninstall_mod(omw_cfg, mod_name, clean=False, rm=False):
 # TODO: Better handling of already installed mods
 # TODO: install mod as name command
 def install_mod(omw_cfg, src, dest, force=False):
-    """Install a mod and add appropriate openmw.cfg entry.
+    """Install a mod in openmw.cfg."
 
     :omw_cfg: (str) Path to openmw.cfg.
     :src: (str) Path to mod.
@@ -134,12 +129,12 @@ def install_mod(omw_cfg, src, dest, force=False):
 
     # Copy the mod
     new_dir = mod_source.install(dest)
-    print("Installing %s to %s" % (name, new_dir))
+    print("Copying %s to %s" % (name, new_dir))
 
-    # Add an entry
-    entry = ConfigEntry("data", new_dir)
-    print("Adding entry %s to openmw.cfg" % entry)
-    omw_cfg.add_entry(entry)
+    # Enable
+    mod = OmwMod(new_dir, omw_cfg)
+    print("Enabling %s" % (mod.name))
+    mod.enable()
     omw_cfg.write()
 
 
@@ -152,35 +147,28 @@ def list_plugins(omw_cfg, tree=False):
 
     omw_cfg = ConfigFile(core.get_full_path(omw_cfg))
 
-    if tree:
-        mods = omw_cfg.mods
-        for mod in mods:
-            plugins = mod.plugins
-            if not plugins:  # Skip modless plugins
-                continue
-
-            print("%s:" % mod.name)
-            disabled_plugins = []  # Save disabled plugins for last
-            for plugin in plugins:
-                if plugin.is_enabled:
+    if tree:  # Tree View
+        for mod in omw_cfg.mods:
+            p_enabled, p_disabled = mod.plugins_enabled, mod.plugins_disabled
+            if p_enabled or p_disabled:
+                print("%s:" % mod.name)
+                for plugin in p_enabled:
                     print("\t(%d) %s" % (plugin.order, plugin.name))
-                else:
-                    disabled_plugins.append(plugin)
-            if disabled_plugins:
-                for plugin in disabled_plugins:
+                for plugin in p_disabled:
                     print("\t- %s" % plugin.name)
-    else:
-        for plugin in core.get_enabled_plugins(omw_cfg):
+
+    else:  # List View
+        for plugin in core.get_plugins_enabled(omw_cfg):
             print("(%d) %s" % (plugin.order, plugin.name))
-        for plugin in core.get_disabled_plugins(omw_cfg):
+        for plugin in core.get_plugins_disabled(omw_cfg):
             print("- " + plugin.name)
 
     # Print orphaned plugins
-    orphaned = core.get_orphaned_plugins(omw_cfg)
+    orphaned = core.get_plugins_orphaned(omw_cfg)
     if orphaned:
         print("\nThe following plugins don't belong to any currently installed mod. Use the clean command to remove them.")
         for plugin in orphaned:
-            print(plugin)
+            print(plugin.name)
 
 
 def enable_plugin(omw_cfg, plugin_name):
