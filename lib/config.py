@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 # TODO: Rework this module, its kind of messy.
 from ConfigParser import SafeConfigParser
 import os.path

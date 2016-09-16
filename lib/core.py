@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 # Core functions used in both CLI and GUI
 # Rule of thumb, imports from this projects modules should be done inside the
 # functions that call them.
