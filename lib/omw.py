@@ -2,7 +2,7 @@
 import os
 
 
-# -- Configuration --
+# -- Config file --
 class ConfigFile(object):
     def __init__(self, path=None):
         """OpenMW config file openmw.cfg.
@@ -11,26 +11,12 @@ class ConfigFile(object):
         """
         self._entries = []
         self._mods = []
+        self._plugins = []
+        self._plugins_orphaned = []
 
         if path:
             self._path = path
             self.load()
-
-    def find_key(self, key):
-        """Return a list object containing entries with matching key.
-
-        :key: (str) name of the search key
-        :returns: (list)
-        """
-        return [e for e in self.entries if e.key == key]
-
-    def find_value(self, value):
-        """Return a list object containing entries with matching value
-
-        :value: (str) name of the search value
-        :returns: (list)
-        """
-        return [e for e in self.entries if e.value == value]
 
     @property
     def path(self):
@@ -52,43 +38,17 @@ class ConfigFile(object):
         """
         return self._mods
 
-    def remove(self, entry):
-        """Remove entry from ConfigFile.
+    @property
+    def plugins(self):
+        return self._plugins
 
-        :entry: (ConfigEntry) entry to be removed.
-        :returns: (int) Index of the removed entry.
-        """
-        entry.config = None
-        self.entries.remove(entry)
-
-    def insert(self, index, entry):
-        if not isinstance(entry, ConfigEntry) and not isinstance(entry, ConfigRawEntry):
-            raise ValueError("ConfigFile only accepts ConfigEntry and ConfigRawEntry, got %s" % type(entry))
-        if entry in self.entries:
-            raise ValueError("Entry '%s' is already in openmw.cfg" % entry)
-
-        entry.config = self
-        self.entries.insert(index, entry)
-
-    def add_entry(self, entry):
-        """Add an entry to the config file, unlike append this method will insert
-        the entry near other entries of the same key.
-
-        :entry: (ConfigEntry) Entry to be added.
-        """
-        if not isinstance(entry, ConfigEntry):
-            raise ValueError("Expecting ConfigEntry object. got %s" % entry)
-
-        entries = self.find_key(entry.key)
-        if entries:  # If entries with the same key exist then append to bottom of that list
-            index = self.entries.index(entries[-1]) + 1
-        else:  # Append in the bottom of the config
-            index = len(self.entries)
-
-        self.insert(index, entry)
+    @property
+    def plugins_orphaned(self):
+        return [p for p in self.plugins if p.is_orphan]
 
     def load(self):
         """Load the openmw.cfg file into the instance."""
+        enabled_plugins = []
         with open(self.path, "r") as fh:
             for line in fh.readlines():
                 if line.isspace():  # Blank line.
@@ -97,16 +57,34 @@ class ConfigFile(object):
                     entry = ConfigRawEntry(line, "COMMENT", config=self)
                 else:  # Normal entry
                     entry = ConfigEntry(line, config=self)
+
+                    # -- Seperate mods and plugins from self.entries
+                    if entry.key == "data":  # Mod
+                        self.mods.append(OmwMod(entry.value, self))
+                        continue
+                    elif entry.key == "content":  # plugins list is populated later
+                        enabled_plugins.append(entry.value)
+                        continue
+
                 self.entries.append(entry)
 
-                # Create and keep track of mod objects
-                if isinstance(entry, ConfigEntry) and entry.key == "data":
-                    mod = OmwMod(entry.value, entry)
-                    self.mods.append(mod)
+        # Populate plugins list
+        self._load_plugins(enabled_plugins)
 
-    def tostring(self):
-        """Convert entries into a string ready to save on disk."""
-        return "\n".join((str(e) for e in self.entries))
+    def _load_plugins(self, plist):
+        enabled = []
+        for mod in self.mods:
+            for plugin in mod.plugins:
+                if plugin.name in plist:
+                    plugin.enable()
+                    enabled.append(plugin.name)
+
+        orphans = tuple(p for p in plist if p not in enabled)
+        for pname in orphans:
+            plugin = OmwPlugin(pname, self)
+            plugin.enable()
+
+        self.plugins.sort(key=lambda p: plist.index(p.name))
 
     def write(self, path=None):
         """Save the config file to a location on disk.
@@ -116,10 +94,18 @@ class ConfigFile(object):
         if not path:
             path = self.path
 
+        out = "\n".join((str(e) for e in self.entries)).rstrip("\n")
+        for mod in self.mods:
+            out = out + '\ndata="%s"' % mod.path
+        for plugin in self.plugins:
+            out = out + '\ncontent=%s' % plugin.name
+
         with open(path, "w") as handle:
-            handle.write(self.tostring())
+            handle.write(out)
 
 
+# TODO: Simplify the following two classes since they will no longer be used
+# to manage mods
 class ConfigEntry(object):
     """OpenMW config entry.
 
@@ -245,48 +231,39 @@ class ConfigRawEntry(object):
 
 # -- Mods and Plugins --
 class OmwMod(object):
-    """Describes an openmw mod and retains useful info about the mod"""
-
-    def __init__(self, path, entry=None):
-        """Init with a path (all mods should exist somewhere), and an openmw config entry if it has one.
-
+    """Describes an installed openmw mod and retains useful info about the mod"""
+    def __init__(self, path, config):
+        """
         :path: (str) Absolute path to the mod.
-        :entry: (ConfigEntry) Mods config entry. Default: None
+        :config: (ConfigFile) openmw.cfg instance this mod belongs to.
         """
-        self._entry = None
-        self.init(path=path, entry=entry)
-
-    def init(self, path=None, entry=None):
-        """Init the instance with new values.
-
-        :path: (str) Absolute path to the mod. Default: Current path
-        :entry: (ConfigEntry) Mods config entry. Default: Current entry
-        """
-        if not path:
-            path = self.path
-        if not entry:
-            entry = self.entry
-
-        if not os.path.isabs(path):
-            raise ValueError("Path must be an absolute path. got %s" % path)
-
-        if entry and not isinstance(entry, ConfigEntry):
-            raise ValueError("Entry must be a ConfigEntry object. got %s" % entry)
-
         self._path = path
-        self._entry = entry
+        self._config = config
+        self._plugins = self._load_plugins()
+
+    def _load_plugins(self):
+        """Get a list of plugins that exist in the mod directory.
+
+        :returns: (list) List of plugins in the mod directory.
+        """
+        plugins = []
+        plugin_extensions = [".esm", ".esp", ".omwaddon"]
+        for fname in self.files:
+            for ext in plugin_extensions:
+                if fname.lower().endswith(ext):
+                    plugins.append(OmwPlugin(fname, self.config, self))
+
+        return plugins
+
+    def enable(self):
+        self.config.mods.append(self)
+
+    def disable(self):
+        self.config.mods.remove(self)
 
     @property
     def path(self):
         return self._path
-
-    @property
-    def entry(self):
-        return self._entry
-
-    @property
-    def is_installed(self):
-        return self.entry and self.config
 
     @property
     def name(self):
@@ -322,77 +299,39 @@ class OmwMod(object):
 
     @property
     def plugins(self):
-        """Get a list of plugins that exist in the mod directory.
+        return self._plugins
 
-        :returns: (list) List of plugins in the mod directory.
-        """
-        plugins = []
-        plugin_extensions = [".esm", ".esp", ".omwaddon"]
-        path = self.path
-        for fname in self.files:
-            # Skip directories
-            if not os.path.isfile(os.path.join(path, fname)):
-                continue
-
-            for ext in plugin_extensions:
-                if fname.lower().endswith(ext):
-                    plugins.append(OmwPlugin(self, fname))
-
+    @property
+    def plugins_enabled(self):
+        plugins = [p for p in self.plugins if p.is_enabled]
+        plugins.sort(key=lambda p: self.config.plugins.index(p))
         return plugins
 
     @property
-    def config(self):
-        """Get the current openmw.cfg object where this mod is referenced.
+    def plugins_disabled(self):
+        return [p for p in self.plugins if not p.is_enabled]
 
-        :returns: (ConfigFile or None)
-        """
-        if not self.entry:
-            return None
-        else:
-            return self.entry.config
+    @property
+    def config(self):
+        return self._config
 
     @property
     def order(self):
-        """Get the mods load order.
-
-        :returns: (int) Mods load order.
-        """
-        if not self.is_installed:
-            raise ValueError("Mod %s is not currently installed" % self.name)
-
-        config = self.config
-        if self.entry not in config.entries:
-            raise ValueError("%s does not have an entry in %s" % (self.name, config.file))
-
-        index = 1
-        for entry in config.find_key("data"):
-            if entry.value == self.path:
-                return index
-            index += 1
-
-        # This shouldn't happen
-        raise ValueError("Could not find an entry for %s in %s" % (self.name, config.file))
+        return self.config.mods.index(self) + 1
 
 
 class OmwPlugin(object):
-    def __init__(self, mod, name):
+    def __init__(self, name, config, mod=None):
         """Class that describes the properties of an openmw plugin
 
+        :name: (str) basename of the plugin
+        :config: (ConfigFile) openmw.cfg instance
         :mod: (OmwMod) Parent mod
-        :name: (str) Name of the plugin with the extension
         """
-        if not isinstance(mod, OmwMod):
-            raise ValueError("Expecting OmwMod, got %s" % mod)
-
-        plugin_extensions = [".esm", ".esp", ".omwaddon"]
-        for ext in plugin_extensions:
-            if name.lower().endswith(ext):
-                break
-        else:  # Confused? see http://python-notes.curiousefficiency.org/en/latest/python_concepts/break_else.html
-            raise ValueError("Plugin name must end with a known plugin extension, got %s" % name)
-
-        self._mod = mod
         self._name = name
+        self._config = config
+        self._mod = mod
+        self._enabled = False
 
     @property
     def name(self):
@@ -400,98 +339,61 @@ class OmwPlugin(object):
 
     @property
     def path(self):
-        return os.path.join(self.mod.path, self.name)
+        if self.mod:
+            return os.path.join(self.mod.path, self.name)
+        else:
+            return None
 
     @property
     def mod(self):
         return self._mod
 
+    @mod.setter
+    def mod(self, mod):
+        self._mod = mod
+
     @property
     def config(self):
-        if not self.is_installed:
-            raise ValueError("Plugin %s is not installed" % self.name)
-
-        return self.mod.config
-
-    @property
-    def entry(self):
-        if not self.is_enabled:
-            raise ValueError("Plugin %s is not enabled, cannot retrieve entry" % self.name)
-
-        cfg = self.config
-        for entry in cfg.find_key("content"):
-            if self.name == entry.name:
-                return entry
-
-    @property
-    def is_installed(self):
-        """Check if the plugin is installed.
-        A plugin is considered installed if its parent mod is installed
-
-        :returns: (bool)
-        """
-        return self.mod.is_installed
+        return self._config
 
     @property
     def is_enabled(self):
-        """Check if the plugin is installed an enabled.
+        return self._enabled
 
-        :returns: (bool)
-        """
-        if self.is_installed:
-            cfg = self.config
-        else:  # Mod not installed, then plugin not installed.
-            # TODO: This will return a negative when the mod is not installed
-            # But the content entry for the plugin is still there.
+    @property
+    def is_orphan(self):
+        if not self.mod:  # :'(
+            return True
+        else:
             return False
-
-        # dont call self.entry here, it calls this method
-        for entry in cfg.find_key("content"):
-            if self.name == entry.value:
-                return True
-
-        return False
 
     @property
     def order(self):
-        """Find the plugins load order
+        """Get the plugins load order
 
-        :returns: (int)
+        :return: (int or None)
         """
         if not self.is_enabled:
             return None
 
-        index = 1
-        for entry in self.config.find_key("content"):
-            if self.name == entry.value:
-                return index
-            else:
-                index += 1
+        return self.config.plugins.index(self) + 1
 
-        # This shouldn't happen
-        raise ValueError("Could not find an entry for %s in %s" % (self.name, self.config.file))
-
-    def enable(self):
+    def enable(self, order=None):
         """Enable the plugin in openmw.cfg"""
-        if not self.is_installed:
-            raise ValueError("Cannot enable plugin %s, its not installed" % self.name)
-
         if self.is_enabled:
             raise ValueError("Plugin %s is already enabled" % self.name)
 
-        entry = ConfigEntry("content", self.name)
-        self.config.add_entry(entry)
+        if order is None:
+            order = len(self.config.plugins)
+
+        self.config.plugins.insert(order, self)
+        self._enabled = True
 
     def disable(self):
         """Disable the plugin by removing its content entry from openmw.cfg"""
-
         if not self.is_enabled:
             raise ValueError("Plugin %s is already disabled" % self.name)
 
-        for entry in self.config.find_key("content"):
-            if self.name == entry.value:
-                self.config.remove(entry)
-                return
-
-        # Shouldn't happen
-        raise ValueError("Plugin %s does not have a entry in %s" % (self.name, self.config.file))
+        self.config.plugins.remove(self)
+        self._entry = None
+        self._enabled = False
