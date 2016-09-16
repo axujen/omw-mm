@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 # This module is used to create an abstraction layer between mods stored in
 # directories and mods stored in archives.
 import os

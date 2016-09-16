@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 # Classes that represent openmw config files and mods/plugins
 import os
 

@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 # Contains the Esm class that describes morrowinds esm/esp files.
 import os.path
 from StringIO import StringIO
