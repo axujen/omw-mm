@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 import wx
 import core
 from ObjectListView import ObjectListView, ColumnDefn
@@ -30,7 +31,7 @@ class MainWindow(wx.Frame):
         self.notebook = wx.Notebook(self)
 
         # Mods Tab
-        self.mods_tab = ModsPanel(self.notebook, omw_cfg.get_mods())
+        self.mods_tab = ModsPanel(self.notebook, omw_cfg.mods)
         self.notebook.AddPage(self.mods_tab, "Mods")
 
         # Plugins Tab
@@ -91,7 +92,9 @@ class ListPanel(wx.Panel):
         super(ListPanel, self).__init__(parent)
 
         # -- List
-        self.list = ObjectListView(self, style=wx.LC_REPORT | wx.LC_HRULES, useAlternateBackColors=False)
+        self.list = ObjectListView(self, style=wx.LC_REPORT,
+                                   useAlternateBackColors=False,
+                                   rowFormatter=self._row_formatter)
 
         self.sizer = wx.BoxSizer()
         self.sizer.Add(self.list, 1, flag=wx.EXPAND | wx.GROW)
@@ -100,6 +103,11 @@ class ListPanel(wx.Panel):
         # -- Right click menu
         self.rmenu = None
         self.list.Bind(wx.EVT_CONTEXT_MENU, self.OnContextMenu)
+
+        # Global color definitions
+        self.color_enabled = "#cce6ff"  # Blue
+        self.color_disabled = "#ffffe6"  # Light Yellow
+        self.color_warning = "#ff8533"  # Orange
 
     def OnContextMenu(self, event):
         pos = self.ScreenToClient(event.GetPosition())
@@ -132,6 +140,9 @@ class ListPanel(wx.Panel):
         """
         return ()
 
+    def _row_formatter(self, row, item):
+        pass
+
 
 class ModsPanel(ListPanel):
     """Mods Tab"""
@@ -140,10 +151,16 @@ class ModsPanel(ListPanel):
         self._mods = mods
 
         self.list.SetColumns([
-            ColumnDefn("Name", valueGetter="get_name"),
-            ColumnDefn("Path", valueGetter="get_path")])
+            ColumnDefn("#", valueGetter="order", fixedWidth=28),
+            ColumnDefn("Name", valueGetter="name"),
+            ColumnDefn("Path", valueGetter="path")])
 
         self.list.SetObjects(self._mods)
+
+    def _context_menu_items(self):
+        m_uninstall = wx.MenuItem(id=wx.ID_DELETE, text="Uninstall", help="Uninstall selected mods.")
+
+        return (m_uninstall,)
 
 
 class PluginsPanel(ListPanel):
@@ -153,42 +170,47 @@ class PluginsPanel(ListPanel):
         self._plugins = plugins
 
         # -- Columns
-        column_order = ColumnDefn("#", valueGetter="get_order", checkStateGetter="is_enabled", checkStateSetter=self.TogglePlugin, fixedWidth=50)
-        column_name = ColumnDefn("Name", valueGetter="get_name")
-        column_mod = ColumnDefn("Mod", valueGetter="get_mod", stringConverter=lambda x: x.get_name())
-        self.list.InstallCheckStateColumn(column_order)
-        self.list.SetColumns((column_order, column_name, column_mod))
+        column_state = ColumnDefn("✓", checkStateGetter="is_enabled", checkStateSetter=self.TogglePlugin, fixedWidth=24)
+        column_order = ColumnDefn("#", valueGetter="order")
+        column_name = ColumnDefn("Name", valueGetter="name")
+        column_mod = ColumnDefn("Mod", valueGetter="mod", stringConverter=lambda x: x.name if x else "")
+        self.list.InstallCheckStateColumn(column_state)
+        self.list.SetColumns((column_state, column_order, column_name, column_mod))
 
         # -- Entries
         self.list.SetObjects(self._plugins)
         self.list.AutoSizeColumns()
+        # self.Refresh()
 
     def Refresh(self):
-        self.list.SetObjects(self._plugins)
+        # self.list.RefreshObjects(self._plugins)
+        # self.list.RefreshObjects()
+        # self.list.SetValue(self._plugins)
+        # self.list.RepopulateList()
+        # self.list.AutoSizeColumns()
+        # self.list.SetObjects(self._plugins)
+        # self.list.AutoSizeColumns()
+        # self.list.SetSortColumn(0, True)
+        pass
 
-    def EnablePlugin(self, plugin):
+    def PluginEnable(self, plugin):
         index = self._plugins.index(plugin)
         self._plugins[index].enable()
-        self.Refresh()
 
-    def DisablePlugin(self, plugin):
+    def PluginDisable(self, plugin):
         index = self._plugins.index(plugin)
         self._plugins[index].disable()
-        self.Refresh()
 
     def TogglePlugin(self, plugin, state):
-        index = self._plugins.index(plugin)
-        if plugin.is_enabled():
-            self._plugins[index].disable()
+        if plugin.is_enabled:
+            self.PluginDisable(plugin)
         else:
-            self._plugins[index].enable()
-
-        self.Refresh()
+            self.PluginEnable(plugin)
 
     # -- Context Menu
     def _context_menu_items(self):
-        enable = wx.MenuItem(id=wx.ID_ANY, text="Enable", help="Enable Selected Plugins")
-        disable = wx.MenuItem(id=wx.ID_ANY, text="Disable", help="Disable Selected Plugins")
+        enable = wx.MenuItem(id=wx.ID_YES, text="Enable", help="Enable selected plugins.")
+        disable = wx.MenuItem(id=wx.ID_NO, text="Disable", help="Disable selected plugins.")
 
         return (enable, disable)
 
@@ -196,12 +218,22 @@ class PluginsPanel(ListPanel):
         selection = self.list.GetSelectedObjects()
         if selection:
             for plugin in selection:
-                if not plugin.is_enabled():
-                    self.EnablePlugin(plugin)
+                if not plugin.is_enabled:
+                    self.PluginEnable(plugin)
 
     def OnContextMenuDisable(self, event):
         selection = self.list.GetSelectedObjects()
         if selection:
             for plugin in selection:
-                if plugin.is_enabled():
-                    self.DisablePlugin(plugin)
+                if plugin.is_enabled:
+                    self.PluginDisable(plugin)
+
+    # -- Formatting
+    def _row_formatter(self, row, item):
+        if item.is_enabled:
+            row.SetBackgroundColour(self.color_enabled)
+        else:
+            row.SetBackgroundColour(self.color_disabled)
+
+        if item.is_orphan:
+            row.SetBackgroundColour(self.color_warning)
