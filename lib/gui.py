@@ -46,11 +46,13 @@ class MainWindow(wx.Frame):
         filemenu = wx.Menu()
 
         f_install = filemenu.Append(wx.ID_OPEN, "&Install", "Install a mod")
+        f_save = filemenu.Append(wx.ID_SAVE, "&Save", "Save changes")
         filemenu.AppendSeparator()
         f_about = filemenu.Append(wx.ID_ABOUT, "&About", "TODO")
         f_exit = filemenu.Append(wx.ID_EXIT, "&Quit", "Quit the program")
 
         self.Bind(wx.EVT_MENU, self.OnInstall, f_install)
+        self.Bind(wx.EVT_MENU, self.OnSave, f_save)
         self.Bind(wx.EVT_MENU, self.OnAbout, f_about)
         self.Bind(wx.EVT_MENU, self.OnExit, f_exit)
 
@@ -71,7 +73,20 @@ class MainWindow(wx.Frame):
         statusbar = wx.StatusBar(self)
         return statusbar
 
+    def _save(self):
+        # Update plugins load order
+        plugins = []
+        for plugin in self.plugins_tab.items:
+            if plugin.is_enabled:
+                plugins.append(plugin)
+        self.omw_cfg.plugins = plugins
+
+        self.omw_cfg.write()
+
     # TODO
+    def OnSave(self, event):
+        self._save()
+
     def OnSettings(self, event):
         pass
 
