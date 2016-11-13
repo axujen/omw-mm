@@ -146,7 +146,7 @@ class ListPanel(wx.Panel):
     def OnDrag(self, event):
         # Only drag and drop when sorting by load order
         sort_column = self.list.GetSortColumn()
-        if not sort_column == self.list.columns[1] and self.list.sortAscending:
+        if not sort_column == self._column_order and self.list.sortAscending:
             return
 
         selection = self._get_drag_selection()
@@ -175,7 +175,7 @@ class ListPanel(wx.Panel):
             self.items[index:index] = items
 
             # Refresh view
-            self.list.SortBy(1)
+            self.list.SetSortColumn(self._column_order, resortNow=True)
             self.list.RefreshObjects(self.items)
 
             # Preserve selection
