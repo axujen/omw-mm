@@ -186,22 +186,26 @@ class ListPanel(wx.Panel):
         pos = self.ScreenToClient(event.GetPosition())
         self.rmenu = wx.Menu()
         menu_items = self._context_menu_items()
+
         if menu_items:
             for item in menu_items:
-                self.rmenu.AppendItem(item)
-                self.Bind(wx.EVT_MENU, self.OnContextMenuItem, item)
+                menu_item = self.rmenu.AppendItem(item)
+                self._bind_menu_item(menu_item)
         else:
             self.rmenu.Append(wx.ID_NO, "Unimplemented!")
 
         self.PopupMenu(self.rmenu, pos)
         self.rmenu.Destroy()
 
-    def OnContextMenuItem(self, event):
-        label = self.rmenu.FindItemById(event.GetId()).GetText().replace(" ", "_")
-        callback = getattr(self, "OnContextMenu" + label, None)
+        # Refresh items after an event
+        self.list.RefreshObjects(self.items)
 
-        if callable(callback):
-            callback(event)
+    def _bind_menu_item(self, item):
+        label = item.GetItemLabel()
+        handler = getattr(self, "OnContextMenu" + label, None)
+
+        if callable(handler):
+            self.Bind(wx.EVT_MENU, handler, item)
         else:
             wx.MessageBox("OnContextMenu%s No Implemented!" % label)
 
