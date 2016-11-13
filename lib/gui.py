@@ -252,17 +252,19 @@ class PluginsPanel(ListPanel):
     def __init__(self, parent, items):
         ListPanel.__init__(self, parent, items)
         # -- Columns
-        self._column_state = ColumnDefn("✓", isSearchable=False,
-                                  checkStateGetter="is_enabled",
-                                  checkStateSetter=self.TogglePlugin)
-        column_name = ColumnDefn("Name", valueGetter="name")
-        column_mod = ColumnDefn("Mod", valueGetter="mod", isSpaceFilling=True,
-                                minimumWidth=self._min_width,
-                                stringConverter=lambda x: x.name if x else "")
+        c_name = ColumnDefn("Name", valueGetter="name")
+        c_mod = ColumnDefn("Mod", valueGetter="mod", isSpaceFilling=True,
+                           minimumWidth=self._min_width,
+                           stringConverter=lambda x: x.name if x else "")
 
-        self.list.InstallCheckStateColumn(self._column_state)
-        self.list.SetColumns((self._column_state, self._column_order, column_name, column_mod))
-        self.list.column_primary = column_name
+        # Plugin checked state next to load order
+        self._column_order.checkStateGetter = "is_enabled"
+        self._column_order.checkStateSetter = self.OnPluginToggle
+        self.list.InstallCheckStateColumn(self._column_order)
+
+        self.list.SetColumns((self._column_order, c_name, c_mod))
+        self.list.SetSortColumn(self._column_order, resortNow=True)
+        self.list._column_primary = c_name  # can't remember what this is needed for
 
         # -- Entries
         self.list.SetObjects(items)
@@ -275,6 +277,11 @@ class PluginsPanel(ListPanel):
         else:
             return float('inf')
 
+    def _get_drag_selection(self):
+        selection = [p for p in self.list.GetSelectedObjects() if p.is_enabled]
+        return selection
+
+    # -- Handling plugin states
     def PluginEnable(self, plugin):
         index = self.items.index(plugin)
         self.items[index].enable()
@@ -283,15 +290,14 @@ class PluginsPanel(ListPanel):
         index = self.items.index(plugin)
         self.items[index].disable()
 
-    def TogglePlugin(self, plugin, state):
+    def PluginToggle(self, plugin):
         if plugin.is_enabled:
             self.PluginDisable(plugin)
         else:
             self.PluginEnable(plugin)
 
-    def _get_drag_selection(self):
-        selection = [p for p in self.list.GetSelectedObjects() if p.is_enabled]
-        return selection
+    def OnPluginToggle(self, plugin, value):
+        self.PluginToggle(plugin)
 
     # -- Context Menu
     def _context_menu_items(self):
