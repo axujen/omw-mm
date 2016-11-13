@@ -43,6 +43,10 @@ class ConfigFile(object):
     def plugins(self):
         return self._plugins
 
+    @plugins.setter
+    def plugins(self, plugins):
+        self._plugins = plugins
+
     @property
     def plugins_orphaned(self):
         return [p for p in self.plugins if p.is_orphan]
